@@ -1,0 +1,268 @@
+/******************************************************************************** 
+ * Combine the twin granules fileA and fileB (i.e. two partial granules from the 
+ * same sensor on the same day over the same tile due to datastrip transition) 
+ * into one complete granule. 
+ *
+ * The input is atmospherically corrected reflectance.
+ * 
+ * Dec 21, 2016
+ * Implementation note:
+ *   I had tried to make output file a copy of fileA and use fileB to 
+ *   update the output, but I got segmentation fault which I was unable to resolve. 
+ *   So settle on the current clumsy design which creates a brand-new output file.
+ *
+ * Jul 8, 2019
+ *   Use maximum NDVI composite for the overlap area because LaSRC sometimes
+ *   does a poor job for the across-track edge of the image.
+ *
+ ********************************************************************************/
+
+#include "s2r.h"
+#include "util.h"
+#include "hls_hdfeos.h"
+
+int copy_metadata_AB(s2r_t *s2rA, s2r_t *s2rB, s2r_t *s2rO);
+
+/* Compute NDVI for the 10m pixel location */
+double ndvi(s2r_t *s2, int irow10m, int icol10m);
+
+int main(int argc, char * argv[])
+{
+	/* Commandline parameters */
+	char fnameA[LINELEN];
+	char fnameB[LINELEN];
+	char fnameO[LINELEN];	/* Consolidated, output */
+
+	s2r_t s2rA, s2rB, s2rO;
+
+	long k;
+	int ib, psi, irow, icol, nrow, ncol;
+	int irow10m, icol10m;
+	int ret;
+	char creationtime[50];
+	char message[MSGLEN];
+
+	if (argc != 4) {
+		fprintf(stderr, "Usage: %s fileA fileB fout\n", argv[0]);
+		exit(1);
+	}
+
+	strcpy(fnameA, argv[1]);
+	strcpy(fnameB, argv[2]);
+	strcpy(fnameO, argv[3]);
+
+	/* Read the input A */
+	strcpy(s2rA.fname, fnameA);
+	ret = open_s2r(&s2rA, DFACC_READ);
+	if (ret != 0) {
+		Error("Error in open_s2r()");
+		exit(1);
+	}
+
+	/* Read the input B */
+	strcpy(s2rB.fname, fnameB);
+	ret = open_s2r(&s2rB, DFACC_READ);
+	if (ret != 0) {
+		Error("Error in open_s2r()");
+		exit(1);
+	}
+
+	/* Create the output */
+	strcpy(s2rO.fname, fnameO);
+	s2rO.nrow[0] = s2rA.nrow[0];
+	s2rO.ncol[0] = s2rA.ncol[0];
+	ret = open_s2r(&s2rO, DFACC_CREATE);
+	if (ret != 0) {
+		Error("Error in open_s2r()");
+		exit(1);
+	}
+
+	/* Copy spectral bands and QA*/
+	for (ib = 0; ib < S2NBAND; ib++) {
+		psi = get_pixsz_index(ib);
+		nrow = s2rO.nrow[psi];
+		ncol = s2rO.ncol[psi];
+		for (irow = 0; irow < nrow; irow++) { 
+			for (icol = 0; icol < ncol; icol++) { 
+				k = irow * ncol + icol;
+				if (s2rA.ref[ib][k] != HLS_REFL_FILLVAL ) {
+					s2rO.ref[ib][k] = s2rA.ref[ib][k];
+	
+					/* Bug fix: Feb 16, 2017. S10 QA is at 10m. 
+					 * When ib is 1, the band is the 10m blue band. 
+					 * And be sure to set it only once.
+					 * s2rO.qa[k] = s2rA.qa[k];
+					 */
+					if (ib == 1) {
+						s2rO.acmask[k] = s2rA.acmask[k];
+						s2rO.fmask[k] = s2rA.fmask[k];
+					}
+				}
+
+				if (s2rB.ref[ib][k] != HLS_REFL_FILLVAL) {
+					if (s2rO.ref[ib][k] == HLS_REFL_FILLVAL) {
+						s2rO.ref[ib][k] = s2rB.ref[ib][k];
+	
+						/* Bug fix: Feb 16, 2017. S10 QA is at 10m.
+						 * When ib is 1, the band is the 10m blue band.
+						 * And set it only once.
+						 * s2rO.qa[k] = s2rB.qa[k];
+						 */
+						if (ib == 1) {
+							s2rO.acmask[k] = s2rB.acmask[k];
+							s2rO.fmask[k] = s2rB.fmask[k];
+						}
+					}
+					else {
+						/* For the 10m bands, irow10m and icol10m are the same as irow and icol.
+						 * For the 20m and 60m bands, irow10m and icol10m are the UL 10m pixel
+						 * nested with the 20m/60 pixel. 
+						 * Instead of looking at the NDVI for the whole 20m/60m pixel, just compare
+						 * NDVI of the nested UL 10m pixel.
+						 */ 
+						irow10m = irow * (psi + 1);
+						icol10m = icol * (psi + 1);
+						if (ndvi(&s2rB, irow10m,icol10m) >= ndvi(&s2rO, irow10m,icol10m)) {
+							s2rO.ref[ib][k] = s2rB.ref[ib][k];
+
+							if (ib == 1) {
+								s2rO.acmask[k] = s2rB.acmask[k];
+								s2rO.fmask[k] = s2rB.fmask[k];
+							}
+						}
+
+						if (icol10m == 2220 && irow10m ==  1890 ) {
+							fprintf(stderr, "ib = %d, NDVI = %lf\n", ib,  ndvi(&s2rB, irow10m,icol10m));
+							fprintf(stderr, "ib = %d, NDVI = %lf\n\n", ib,  ndvi(&s2rO, irow10m,icol10m));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/* Copy the metadata from twin granules. 
+	 * Update HLS processing time, reset spatial and cloud coverages
+	 */
+	ret = copy_metadata_AB(&s2rA, &s2rB, &s2rO);
+	if (ret != 0) {
+		Error("Error in copy_metadata_AB");
+		return(-1);
+	}
+	getcurrenttime(creationtime);
+	SDsetattr(s2rO.sd_id, HLSTIME, DFNT_CHAR8, strlen(creationtime), (VOIDP)creationtime);
+	setcoverage(&s2rO);
+
+	/* A few variables needed to create the ENVI header */
+	s2rO.ulx = s2rA.ulx;
+	s2rO.uly = s2rA.uly;
+	strcpy(s2rO.zonehem, s2rA.zonehem);
+
+	/* Close */
+	ret = close_s2r(&s2rO);
+	if (ret != 0) {
+		Error("Erro in close_s2r()");
+		exit(1);
+	}
+
+
+	/* Make it hdfeos */
+ 	sds_info_t all_sds[S2NBAND+2];
+	set_S10_sds_info(all_sds, S2NBAND+2, &s2rO);
+	ret = S10_PutSpaceDefHDF(&s2rO, all_sds, S2NBAND+2);
+	if (ret != 0) {
+		Error("Error in HLS_PutSpaceDefHDF");
+		exit(1);
+	}
+	return(0);
+}
+
+
+/* Copy the input metadata from the twin granules A and B into into the consolidated 
+ * granule, concatenating a few key metadata item that are different between A and B.
+ * 
+ * Dec 22, 2016. 
+ * Jan 23, 2017.
+ */
+int copy_metadata_AB(s2r_t *s2rA, s2r_t *s2rB, s2r_t *s2rO)
+{
+	char attr[600];
+	/* SAFE name not available in Google data.  Nov 15, 2016.
+	 * SDsetattr(s2at30m->sd_id, SAFE_NAME, DFNT_CHAR8, strlen(s2r->safe_name), (VOIDP)s2r->safe_name);
+	 */
+	if (get_all_metadata(s2rA) != 0) {
+		Error("Error in copy_metadata_AB");
+		return(-1);
+	}
+	if (get_all_metadata(s2rB) != 0) {
+		Error("Error in copy_metadata_AB");
+		return(-1);
+	}
+
+	/* URI */
+	sprintf(attr, "%s + %s", s2rA->uri, s2rB->uri);	 /* Use '+" because ':' has been in data quality. */
+	SDsetattr(s2rO->sd_id, PRODUCT_URI, DFNT_CHAR8, strlen(attr), (VOIDP)attr);
+
+	/* Quality */
+	sprintf(attr, "%s + %s", s2rA->quality, s2rB->quality);
+	SDsetattr(s2rO->sd_id, L1C_QUALITY, DFNT_CHAR8, strlen(attr), (VOIDP)attr);
+
+	/* Spacecraft, same */
+	SDsetattr(s2rO->sd_id, SPACECRAFT,  DFNT_CHAR8, strlen(s2rA->spacecraft), (VOIDP)s2rA->spacecraft);
+
+	/* tile ID. Should really be granuel ID */
+	sprintf(attr, "%s + %s", s2rA->tile_id, s2rB->tile_id);
+	SDsetattr(s2rO->sd_id, TILE_ID, DFNT_CHAR8, strlen(attr), (VOIDP)attr);
+
+	/* DATASTRIP must be different */
+	sprintf(attr, "%s + %s", s2rA->datastrip_id, s2rB->datastrip_id);
+	SDsetattr(s2rO->sd_id, DATASTRIP_ID, DFNT_CHAR8, strlen(attr), (VOIDP)attr);
+
+	/* BASELINE */
+	sprintf(attr, "%s + %s", s2rA->baseline, s2rB->baseline);
+	SDsetattr(s2rO->sd_id, PROCESSING_BASELINE, DFNT_CHAR8, strlen(attr), (VOIDP)attr);
+	
+	/* SENSING_TIME */
+	sprintf(attr, "%s + %s", s2rA->sensing_time, s2rB->sensing_time);
+	SDsetattr(s2rO->sd_id, SENSING_TIME, DFNT_CHAR8, strlen(attr), (VOIDP)attr);
+
+	/* ACCODE */
+	sprintf(attr, "%s + %s", s2rA->accode, s2rB->accode);
+	SDsetattr(s2rO->sd_id, ACCODE, DFNT_CHAR8, strlen(attr), (VOIDP)attr);
+
+	SDsetattr(s2rO->sd_id, L1PROCTIME, DFNT_CHAR8, strlen(s2rA->l1proctime), (VOIDP)s2rA->l1proctime);
+	SDsetattr(s2rO->sd_id, HORIZONTAL_CS_NAME, DFNT_CHAR8, strlen(s2rA->cs_name), (VOIDP)s2rA->cs_name);
+	SDsetattr(s2rO->sd_id, HORIZONTAL_CS_CODE, DFNT_CHAR8, strlen(s2rA->cs_code), (VOIDP)s2rA->cs_code);
+	SDsetattr(s2rO->sd_id, NROWS, DFNT_CHAR8, strlen(s2rA->nr), (VOIDP)s2rA->nr);
+	SDsetattr(s2rO->sd_id, NCOLS, DFNT_CHAR8, strlen(s2rA->nc), (VOIDP)s2rA->nc);
+	SDsetattr(s2rO->sd_id, SPATIAL_RESOLUTION, DFNT_CHAR8, strlen(s2rA->spatial_resolution), (VOIDP)s2rA->spatial_resolution);
+	SDsetattr(s2rO->sd_id, ULX, DFNT_FLOAT64, 1, (VOIDP)&(s2rA->ululx));
+	SDsetattr(s2rO->sd_id, ULY, DFNT_FLOAT64, 1, (VOIDP)&(s2rA->ululy));
+	SDsetattr(s2rO->sd_id, MSZ, DFNT_FLOAT64, 1, (VOIDP)&(s2rA->msz));
+	SDsetattr(s2rO->sd_id, MSA, DFNT_FLOAT64, 1, (VOIDP)&(s2rA->msa));
+	SDsetattr(s2rO->sd_id, MVZ, DFNT_FLOAT64, 1, (VOIDP)&(s2rA->mvz));
+	SDsetattr(s2rO->sd_id, MVA, DFNT_FLOAT64, 1, (VOIDP)&(s2rA->mva));
+
+	// coverage will be computed outside??? Jan 20, 2106.
+	//SDsetattr(s2rO->sd_id, SPCOVER, DFNT_INT16, 1, (VOIDP)&(s2rA->spcover));
+	//SDsetattr(s2rO->sd_id, CLCOVER, DFNT_INT16, 1, (VOIDP)&(s2rA->clcover));
+
+	return(0);
+}
+
+/* Compute NDVI for the 10m pixel location */
+double ndvi(s2r_t *s2, int irow10m, int icol10m)
+{
+	int ncol10m, k;
+	int red, nir;
+
+	ncol10m = s2->ncol[0]; 
+	k = irow10m * ncol10m + icol10m;
+	nir = s2->ref[7][k];
+      	red = s2->ref[3][k];
+	if (red != HLS_REFL_FILLVAL && nir != HLS_REFL_FILLVAL)
+		return (nir-red)*1.0/(nir+red);
+	else
+		return HLS_REFL_FILLVAL;
+
+}
