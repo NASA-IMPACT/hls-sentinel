@@ -39,6 +39,8 @@ RUN cd ${SRC_DIR}/ppS10/resamp \
 # Move AROP
 COPY ./hls_libs/ppS10/AROPonS2/run.AROPonS2.sh ${PREFIX}/bin/
 
+COPY ./hls_libs/ppS10/script/run_pps10.sh ${PREFIX}/bin/
+
 COPY lasrc_sentinel_granule.sh ./usr/local/lasrc_sentinel_granule.sh
 
 ENTRYPOINT ["/bin/sh", "-c"]
