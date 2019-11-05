@@ -23,7 +23,7 @@ COPY ./hls_libs/ppS10/consolidate ${SRC_DIR}/ppS10/consolidate
 RUN cd ${SRC_DIR}/ppS10/consolidate \
     && make clean \
     && make \
-    && cp consolidate ${PREFIX}/bin/ \
+    && make install \
     && cd $SRC_DIR \
     && rm -rf pps10/consolidate
 
@@ -32,16 +32,27 @@ COPY ./hls_libs/ppS10/resamp ${SRC_DIR}/ppS10/resamp
 RUN cd ${SRC_DIR}/ppS10/resamp \
     && make clean \
     && make \
-    && cp resamp_s2 ${PREFIX}/bin/ \
+    && make install \
     && cd $SRC_DIR \
     && rm -rf pps10/resamp
 
-# Move AROP
+# Move and compile AROP ortho binary
+COPY ./hls_libs/AROP ${SRC_DIR}/AROP
+RUN cd ${SRC_DIR}/AROP \
+    && make clean \
+    && make \
+    && make install \
+    && cd $SRC_DIR \
+    && rm -rf AROP
+
+# Move AROP script
 COPY ./hls_libs/ppS10/AROPonS2/run.AROPonS2.sh ${PREFIX}/bin/
 
-COPY ./hls_libs/ppS10/script/run_pps10.sh ${PREFIX}/bin/
+COPY ./hls_libs/ppS10/script/run_ppS10.sh ${PREFIX}/bin/
 
 COPY lasrc_sentinel_granule.sh ./usr/local/lasrc_sentinel_granule.sh
+
+WORKDIR /workspace
 
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["/usr/local/lasrc_sentinel_granule.sh"]

@@ -1,0 +1,50 @@
+PARAMETER_FILE
+
+# use Sentinel2 MSI image (NIR band8) as a base image 
+BASE_LANDSAT = HLS.S10.T33TUL.2015365.v1.0.NIR.10m.sin.bin
+BASE_FILE_TYPE = BINARY
+BASE_DATA_TYPE = 2
+BASE_NSAMPLE = 12957
+BASE_NLINE = 11238
+BASE_PIXEL_SIZE = 10.0
+BASE_UPPER_LEFT_CORNER = 958581.520000,5120486.5
+BASE_PROJECTION_CODE = 16
+BASE_PROJECTION_PARAM = 6371007.181, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+BASE_DATUM = 12
+BASE_UNIT = 2
+# use Landsat1-5, Landsat7, Landsat8, TERRA, CBERS1, CBERS2, AWIFS, HJ1, Sentinel2 #
+BASE_SATELLITE = Sentinel2
+
+# Landsat warp images
+WARP_NBANDS = 1
+WARP_LANDSAT_BAND = LC81920282015365LGN00_sr.NIR.bin
+WARP_BAND_DATA_TYPE = 2
+WARP_BASE_MATCH_BAND = LC81920282015365LGN00_sr.NIR.bin
+WARP_FILE_TYPE = BINARY
+# following four variables (-1) will be read from warp match band if it's in GeoTIFF format 
+WARP_NSAMPLE = 7641
+WARP_NLINE = 7771
+WARP_PIXEL_SIZE = 30.0
+WARP_UPPER_LEFT_CORNER = 621885.000000, 5217915.0
+WARP_UTM_ZONE = 32
+WARP_DATUM = 12
+# use Landsat1-5, Landsat7, Landsat8, TERRA, CBERS1, CBERS2, AWIFS, HJ1, Sentinel2 #
+WARP_SATELLITE = Landsat8
+
+# Landsat orthorectied output images
+OUT_PIXEL_SIZE = 30.0
+# NN-nearest neighbor; BI-bilinear interpolation; CC-cubic convolution; AGG-aggregation; none-skip resampling #
+RESAMPLE_METHOD = CC
+# fillvalue
+BK_VALUE = -1000
+# BASE-use base map extent; WARP-use warp map extent; DEF-user defined extent #
+OUT_EXTENT = BASE
+OUT_LANDSAT_BAND = cLC81920282015365LGN00_sr.NIR.Base10.sin.bin
+OUT_BASE_MATCH_BAND =  cLC81920282015365LGN00_sr.NIR.Base10.sin.bin
+OUT_BASE_POLY_ORDER = 1
+CP_LOG_FILE = cp_sin10_log
+
+# ancillary input for orthorectification process
+CP_PARAMETERS_FILE = lndortho.cps_par.ini
+
+END

@@ -124,10 +124,6 @@ trap 'rm -f $warp_bin $tmpstdout' 0
 
 ### Image one: BASE
 
->$param
-echo PARAMETER_FILE >> $param
-echo >> $param
-
 # Note that the new version of gdal gives warning --
 # Warning 6: Driver ENVI does not support NBITS creation option. 
 # Ralated to this, when converted to TIFF before atmospheric correction,
@@ -148,21 +144,6 @@ then
 fi
 
 
-echo "# use Sentinel2 MSI image (NIR band08 @10m ) as a base image " >> $param
-echo "BASE_LANDSAT = $base_bin" >> $param
-echo "BASE_FILE_TYPE = BINARY" >> $param
-echo "BASE_DATA_TYPE = 2" >> $param
-echo "BASE_NSAMPLE = $base_nsample" >> $param
-echo "BASE_NLINE = $base_nline" >> $param
-echo "BASE_PIXEL_SIZE = $base_pixsz" >> $param
-echo "BASE_UPPER_LEFT_CORNER = $base_ulx, $base_uly" >> $param
-echo "BASE_UTM_ZONE = $base_zone" >> $param
-echo "BASE_DATUM = 12" >> $param
-echo "# use Landsat1-5, Landsat7, Landsat8, TERRA, CBERS1, CBERS2, AWIFS, HJ1, Sentinel2 #" >> $param
-echo "BASE_SATELLITE = Sentinel2" >> $param
-echo >> $param
-
-
 ### Image two: WARP
 warp_bin=$tmpdir/tmp.warpbin.${base_bname}_${warp_bname}.bin
 hdp dumpsds -n B08 -b -o $warp_bin $s10hdf  
@@ -180,40 +161,54 @@ warp_uly=$base_uly
 warp_pixsz=$base_pixsz
 warp_zone=$base_zone
 
-echo "# Sentinel2 warp images " >> $param
-echo "WARP_NBANDS = 1" >> $param
-echo "WARP_LANDSAT_BAND = $warp_bin" >> $param
-echo "WARP_BAND_DATA_TYPE = 2" >> $param
-echo "WARP_BASE_MATCH_BAND = $warp_bin" >> $param
-echo "WARP_FILE_TYPE = BINARY" >> $param
-echo "# following four variables (-1) will be read from warp match band if it's in GeoTIFF format " >> $param
-echo "WARP_NSAMPLE = $warp_nsample" >> $param
-echo "WARP_NLINE = $warp_nline" >> $param
-echo "WARP_PIXEL_SIZE = $warp_pixsz" >> $param
-echo "WARP_UPPER_LEFT_CORNER = $warp_ulx, $warp_uly" >> $param
-echo "WARP_UTM_ZONE = $warp_zone" >> $param
-echo "WARP_DATUM = 12" >> $param
-echo "# use Landsat1-5, Landsat7, Landsat8, TERRA, CBERS1, CBERS2, AWIFS, HJ1, Sentinel2 #" >> $param
-echo "WARP_SATELLITE = Sentinel2 " >> $param
-echo >> $param
+cat << EOF > $param
+PARAMETER_FILE
 
-echo "# NN-nearest neighbor; BI-bilinear interpolation; CC-cubic convolution; AGG-aggregation; none-skip resampling #" >> $param
-echo "RESAMPLE_METHOD = none" >> $param
-echo "# BASE-use base map extent; WARP-use warp map extent; DEF-user defined extent # " >> $param
-echo "OUT_EXTENT = BASE" >> $param
-echo "OUT_BASE_POLY_ORDER = 1" >> $param
-echo "CP_LOG_FILE = $aroplog" >> $param
-echo >> $param
+# use Sentinel2 MSI image (NIR band08 @10m ) as a base image
+BASE_LANDSAT = $base_bin
+BASE_FILE_TYPE = BINARY
+BASE_DATA_TYPE = 2
+BASE_NSAMPLE = $base_nsample
+BASE_NLINE = $base_nline
+BASE_PIXEL_SIZE = $base_pixsz
+BASE_UPPER_LEFT_CORNER = $base_ulx, $base_uly
+BASE_UTM_ZONE = $base_zone
+BASE_DATUM = 12
+# use Landsat1-5, Landsat7, Landsat8, TERRA, CBERS1, CBERS2, AWIFS, HJ1, Sentinel2 #
+BASE_SATELLITE = Sentinel2
 
-echo "# ancillary input for orthorectification process" >> $param
-echo "CP_PARAMETERS_FILE = $AROP_INI_S2" >> $param
-echo >> $param
-echo "END" >> $param
+# Sentinel2 warp images 
+WARP_NBANDS = 1
+WARP_LANDSAT_BAND = $warp_bin
+WARP_BAND_DATA_TYPE = 2
+WARP_BASE_MATCH_BAND = $warp_bin
+WARP_FILE_TYPE = BINARY
+# following four variables (-1) will be read from warp match band if it's in GeoTIFF format 
+WARP_NSAMPLE = $warp_nsample
+WARP_NLINE = $warp_nline
+WARP_PIXEL_SIZE = $warp_pixsz
+WARP_UPPER_LEFT_CORNER = $warp_ulx, $warp_uly
+WARP_UTM_ZONE = $warp_zone
+WARP_DATUM = 12
+# use Landsat1-5, Landsat7, Landsat8, TERRA, CBERS1, CBERS2, AWIFS, HJ1, Sentinel2 #
+WARP_SATELLITE = Sentinel2 
+
+# NN-nearest neighbor; BI-bilinear interpolation; CC-cubic convolution; AGG-aggregation; none-skip resampling #
+RESAMPLE_METHOD = none
+# BASE-use base map extent; WARP-use warp map extent; DEF-user defined extent # 
+OUT_EXTENT = BASE
+OUT_BASE_POLY_ORDER = 1
+CP_LOG_FILE = $aroplog
+
+# ancillary input for orthorectification process
+CP_PARAMETERS_FILE = $AROP_INI_S2
+END
+EOF
 
 # Run
 # AROP writes a lot to the stderr and PBS does not like that; capture in a file.
 >$aroperr
-command=$CODE_BASE_DIR/share/AROP/ortho
+command=ortho
 if [ ! -f $command ]
 then
 	echo "Command not found: $command" 2>>$aroperr
@@ -232,7 +227,7 @@ fi
 if [ ! -s $aroplog ]
 then
 	echo >>$aroperr
-	echo "Failed: /u/jju/code/AROP/ortho -r $param" >>$aroperr
+	echo "Failed: ortho -r $param" >>$aroperr
 	echo "AROP log file is empty: $aroplog" >>$aroperr
 	exit 1
 fi

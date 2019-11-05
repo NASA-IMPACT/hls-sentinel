@@ -34,25 +34,8 @@ cubic_conv.o: cubic_conv.c
 hls_hdfeos.o: hls_hdfeos.c
 	$(CC) $(CFLAGS) -c  hls_hdfeos.c -I$(HDFINC)
 
-link:
-	ln -sf ../../../share/common/fillval.h
-	ln -sf ../../../share/common/hls_commondef.h
-	ln -sf ../../../share/common/hls_projection.h
-	ln -sf ../../../share/common/read_arop_output.h
-	ln -sf ../../../share/common/read_arop_output.c
-	ln -sf ../../../share/common/cubic_conv.h
-	ln -sf ../../../share/common/cubic_conv.c
-	ln -sf ../../common/s2r.h
-	ln -sf ../../common/s2r.c
-	ln -sf ../../common/s2def.h
-	ln -sf ../../common/s2at30m.h
-	ln -sf ../../../share/common/hdfutility.h
-	ln -sf ../../../share/common/hdfutility.c
-	ln -sf ../../../share/common/util.h
-	ln -sf ../../../share/common/util.c
-	ln -sf ../../../share/common/hls_hdfeos.h
-	ln -sf ../../../share/common/hls_hdfeos.c
-	ln -sf ../../../L8/common/lsat.h
+install:
+	install -m 755 $(TGT) $(PREFIX)/bin
 
 clean:
 	rm -f *.o
