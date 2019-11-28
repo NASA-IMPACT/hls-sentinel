@@ -28,8 +28,8 @@ RUN cd ${SRC_DIR}/addFmaskSDS \
     && cd $SRC_DIR \
     && rm -rf addFmaskSDS
 
-# RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
-# COPY ./scripts/alter_sr_band_names.py ${PREFIX}/bin/alter_sr_band_names.py
+RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
+COPY ./scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
 
 COPY lasrc_sentinel_granule.sh ./usr/local/lasrc_sentinel_granule.sh
 
