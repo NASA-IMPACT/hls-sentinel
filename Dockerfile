@@ -28,6 +28,15 @@ RUN cd ${SRC_DIR}/addFmaskSDS \
     && cd $SRC_DIR \
     && rm -rf addFmaskSDS
 
+# Move and compile twohdf2one
+COPY ./hls_libs/twohdf2one ${SRC_DIR}/twohdf2one
+RUN cd ${SRC_DIR}/twohdf2one \
+    && make BUILD_STATIC=yes ENABLE_THREADING=yes \
+    && make clean \
+    && make install \
+    && cd $SRC_DIR \
+    && rm -rf twohdf2one
+
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 COPY ./scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
 

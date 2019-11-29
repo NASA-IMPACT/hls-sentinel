@@ -1,16 +1,15 @@
-TGT = addFmaskSDS
-OBJ = 	addFmaskSDS.o \
+TGT = twohdf2one
+OBJ = 	twohdf2one.o \
 	hls_projection.o \
 	s2r.o \
 	util.o \
-	hdfutility.o \
-	hls_hdfeos.o
-	
-$(TGT): $(OBJ)
-	$(CC) $(CFLAGS) -o $(TGT) $(OBJ) -L$(GCTPLIB) -L$(HDFLIB) -L$(ZLIB) -L$(SZLIB) -L$(JPGLIB) -L$(PROJLIB)  $(GCTPLINK) $(HDFLINK) 
+	hdfutility.o
 
-addFmaskSDS.o: addFmaskSDS.c 
-	$(CC) $(CFLAGS) -c addFmaskSDS.c -I$(HDFINC) -I$(GCTPINC) -I$(SRC_DIR)
+$(TGT): $(OBJ)
+	$(CC) $(CFLAGS) -o $(TGT) $(OBJ) -L$(GCTPLIB) -L$(HDFLIB) -L$(ZLIB) -L$(SZLIB) -L$(JPGLIB) -L$(PROJLIB)  $(GCTPLINK) $(HDFLINK)
+
+twohdf2one.o: twohdf2one.c
+	$(CC) $(CFLAGS) -c twohdf2one.c -I$(HDFINC) -I$(GCTPINC) -I$(SRC_DIR)
 
 hls_projection.o: ${SRC_DIR}/hls_projection.c
 	$(CC) $(CFLAGS) -c ${SRC_DIR}/hls_projection.c -I$(HDFINC) -I$(GCTPINC) -I$(SRC_DIR)
@@ -23,9 +22,6 @@ util.o: ${SRC_DIR}/util.c
 
 hdfutility.o: ${SRC_DIR}/hdfutility.c
 	$(CC) $(CFLAGS) -c  ${SRC_DIR}/hdfutility.c -I$(HDFINC) -I$(SRC_DIR)
-
-hls_hdfeos.o: ${SRC_DIR}/hls_hdfeos.c
-	$(CC) $(CFLAGS) -c  ${SRC_DIR}/hls_hdfeos.c -I$(HDFINC) -I$(SRC_DIR)
 
 install:
 	install -m 755 $(TGT) /usr/bin
