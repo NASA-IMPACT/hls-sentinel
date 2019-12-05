@@ -79,7 +79,7 @@ convert_espa_to_hdf --xml="$hls_espa_one_xml" --hdf="$sr_hdf_one"
 convert_espa_to_hdf --xml="$hls_espa_two_xml" --hdf="$sr_hdf_two"
 
 # Combine split hdf files and resample 10M SR bands back to 20M and 60M.
-twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml "LaSRC" "$hls_sr_combined_hdf"
+twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_combined_hdf"
 
 # Run addFmaskSDS
 # addFmaskSDS "$srhdf" "$fmaskbin" "$mtl" "LaSRC" "$outputhdf" >&2

@@ -57,10 +57,10 @@ def main(argv):
             if band.get('name') == 'sr_band8a':
                 band.set('name', 'band8a')
                 band.set('product', hls_product)
-            elif band.get('name') == 'B09':
+            elif band.get('name') == 'sr_band9':
                 band.set('name', 'band09')
                 band.set('product', hls_product)
-            elif band.get('name') == 'B10':
+            elif band.get('name') == 'sr_band10':
                 band.set('name', 'band10')
                 band.set('product', hls_product)
             elif band.get('name') == 'sr_band11':

@@ -31,11 +31,19 @@ RUN cd ${SRC_DIR}/addFmaskSDS \
 # Move and compile twohdf2one
 COPY ./hls_libs/twohdf2one ${SRC_DIR}/twohdf2one
 RUN cd ${SRC_DIR}/twohdf2one \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes \
+    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
     && make clean \
     && make install \
     && cd $SRC_DIR \
     && rm -rf twohdf2one
+
+# RUN cd ${SRC_DIR} \
+    # && wget https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2  \
+    # && tar xvjf valgrind-3.15.0.tar.bz2 \
+    # && cd valgrind-3.15.0 \
+    # && ./configure \
+    # && make \
+    # && make install  
 
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 COPY ./scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py

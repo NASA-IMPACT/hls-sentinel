@@ -6,7 +6,7 @@ OBJ = 	twohdf2one.o \
 	hdfutility.o
 
 $(TGT): $(OBJ)
-	$(CC) $(CFLAGS) -o $(TGT) $(OBJ) -L$(GCTPLIB) -L$(HDFLIB) -L$(ZLIB) -L$(SZLIB) -L$(JPGLIB) -L$(PROJLIB)  $(GCTPLINK) $(HDFLINK)
+	$(CC) $(CFLAGS) -o $(TGT) $(OBJ) -L$(GCTPLIB) -L$(HDFLIB) -L$(ZLIB) -L$(SZLIB) -L$(JPGLIB) -L$(PROJLIB)  $(GCTPLINK) $(HDFLINK) -g
 
 twohdf2one.o: twohdf2one.c
 	$(CC) $(CFLAGS) -c twohdf2one.c -I$(HDFINC) -I$(GCTPINC) -I$(SRC_DIR)

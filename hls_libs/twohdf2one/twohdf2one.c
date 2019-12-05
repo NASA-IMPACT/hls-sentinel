@@ -77,10 +77,8 @@ int main(int argc, char *argv[])
 	strcpy(accodename,       argv[5]);
 	strcpy(fname_out,        argv[6]);
 
-  printf("Debug Start processing");
 	/* Read input SDS and map info */
 	ret = read_twohdf(&s2in, fname_part1, fname_part2, fname_granulexml);
-  printf("Debug Read HDF Files");
 	if (ret != 0) {
 		Error("Error in reading two hdf");
 		exit(1);
@@ -105,7 +103,7 @@ int main(int argc, char *argv[])
 		Error("Error in setinputmeta");
 		exit(1);
 	}
-  printf("Debug Read XML");
+
 	/* Processing time */
 	getcurrenttime(creationtime);
 	SDsetattr(s2out.sd_id, HLSTIME, DFNT_CHAR8, strlen(creationtime), (VOIDP)creationtime);
@@ -164,7 +162,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-  printf("Debug Resampled bands");
+
 	/* CLOUD SDS. Direct copy. 10m in, 10m out */
 	for (irow = 0; irow < s2in.nrow[0]; irow++) {
 		for (icol = 0; icol < s2in.ncol[0]; icol++) {
@@ -173,7 +171,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-  printf("Debug Resampled clouds");
 	close_s2r(&s2out);
 
 	return(0);
@@ -184,7 +181,7 @@ int main(int argc, char *argv[])
 int read_twohdf(s2r_t *s2r, char *fname1, char *fname2, char *fname_granulexml)
 {
 	char fname[500];
-	char sds_name[500];
+	char sds_name[500];     
 	int32 sds_index;
 	int32 sd_id, sds_id;
 	int32 nattr, attr_index;
@@ -196,26 +193,24 @@ int read_twohdf(s2r_t *s2r, char *fname1, char *fname2, char *fname_granulexml)
 	int ib;
 	char message[MSGLEN];
 
-  printf("Debug Read HDF Files");
-  printf("Debug the %s value", S2NBAND);
-	for (ib = 0; ib < S2NBAND; ib++)
+	for (ib = 0; ib < S2NBAND; ib++) 
 		s2r->ref[ib] = NULL;
 	s2r->accloud = NULL; 	/* CLOUD SDS is new */
 
-	for (ib = 0; ib < S2NBAND; ib++) {
-		if (ib == 0 || ib == 8) {
+	for (ib = 0; ib < S2NBAND; ib++) { 
+		if (ib == 0 || ib == 8) { 
 			if (ib == 0)
 				strcpy(fname, fname1);
 			else
 				strcpy(fname, fname2);
-
+				
 			if ((sd_id = SDstart(fname, DFACC_READ)) == FAIL) {
 				sprintf(message, "Cannot open %s", fname);
 				Error(message);
 				return(ERR_READ);
 			}
 		}
-
+		
 		strcpy(sds_name, VermoteS2sdsname[ib]);
 		if ((sds_index = SDnametoindex(sd_id, sds_name)) == FAIL) {
 			sprintf(message, "Didn't find the SDS %s in %s", sds_name, fname);
@@ -233,7 +228,7 @@ int read_twohdf(s2r_t *s2r, char *fname1, char *fname2, char *fname_granulexml)
 		s2r->nrow[0] = dimsizes[0];
 		s2r->ncol[0] = dimsizes[1];
 
-		/* Allocate memory for read access */
+		/* Allocate memory for read access */ 
 		if ((s2r->ref[ib] = (int16*)calloc(dimsizes[0] * dimsizes[1], sizeof(int16))) == NULL) {
 			sprintf(message, "Cannot allocate memory. nrow, ncol = %d, %d\n", dimsizes[0], dimsizes[1]);
 			Error(message);
