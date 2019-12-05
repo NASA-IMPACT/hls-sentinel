@@ -25,10 +25,10 @@ url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5
 gsutil -m cp -r "$url" "$workingdir"
 
 # Run Fmask
-# fmask_sentinel2Stacked.py -o "$fmask" --safedir "$safedirectory"
+fmask_sentinel2Stacked.py -o "$fmask" --safedir "$safedirectory"
 
 # Convert to flat binary
-# gdal_translate -of ENVI "$fmask" "$fmaskbin"
+gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
 # Zips and unpacks S2 SAFE directory.  The ESA SAFE data will be provided zipped.
 cd "$workingdir"
@@ -69,6 +69,7 @@ hls_espa_two_xml="${espa_id}_2_hls.xml"
 sr_hdf_one="${espa_id}_sr_1.hdf"
 sr_hdf_two="${espa_id}_sr_2.hdf"
 hls_sr_combined_hdf="${espa_id}_sr_combined.hdf"
+hls_sr_output_hdf="${espa_id}_sr_output.hdf"
 
 # Create ESPA xml files using HLS v1.5 band names.
 create_sr_hdf_file.py -i "$espa_xml" -o "$hls_espa_one_xml" -f one
@@ -82,6 +83,7 @@ convert_espa_to_hdf --xml="$hls_espa_two_xml" --hdf="$sr_hdf_two"
 twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_combined_hdf"
 
 # Run addFmaskSDS
+addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
 # addFmaskSDS "$srhdf" "$fmaskbin" "$mtl" "LaSRC" "$outputhdf" >&2
 # if [ $? -ne 0 ]
 # then
