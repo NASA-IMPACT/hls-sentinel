@@ -37,22 +37,6 @@ rm -rf "${id}.SAFE"
 unpackage_s2.py -i "$safezip" -o "$workingdir"
 rm "$safezip"
 
-# granuledirectory="${safedirectory}/GRANULE"
-# Move metadata files to IMG_DATA for ESPA conversion
-# cd "$granuledirectory"
-
-# granule_id=$(find . -maxdepth 1 -type d -name '[^.]?*' -printf %f -quit)
-# workingdir=/tmp/${id}.SAFE/GRANULE/${granule_id}/IMG_DATA/
-
-# cp "/tmp/${id}.SAFE/MTD_MSIL1C.xml" "$workingdir"
-# cp "/tmp/${id}.SAFE/GRANULE/${granule_id}/MTD_TL.xml" "$workingdir"
-
-# cd "$workingdir"
-
-
-# espa_xml="${id}.xml"
-# outputhdf="${id}_out.hdf"
-
 # Convert to espa format
 cd "$safedirectory"
 convert_sentinel_to_espa
@@ -84,13 +68,6 @@ twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_
 
 # Run addFmaskSDS
 addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
-# addFmaskSDS "$srhdf" "$fmaskbin" "$mtl" "LaSRC" "$outputhdf" >&2
-# if [ $? -ne 0 ]
-# then
-	# echo "Error in addFmaskSDS: $outputhdf" >&2
-	# echo "Line $LINENO of ${BASH_SOURCE[0]}" >&2
-	# exit 1
-# fi
 
 cd "$workingdir"
 # Copy files to S3
