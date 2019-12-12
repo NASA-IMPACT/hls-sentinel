@@ -1,4 +1,5 @@
-FROM 350996086543.dkr.ecr.us-west-2.amazonaws.com/hls-base:latest
+ARG AWS_ACCOUNT_ID=000000000000
+FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base:latest
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -43,7 +44,7 @@ RUN cd ${SRC_DIR}/twohdf2one \
     # && cd valgrind-3.15.0 \
     # && ./configure \
     # && make \
-    # && make install  
+    # && make install
 
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 COPY ./scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
