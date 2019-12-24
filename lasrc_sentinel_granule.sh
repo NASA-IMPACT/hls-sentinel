@@ -25,7 +25,7 @@ url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5
 gsutil -m cp -r "$url" "$workingdir"
 
 # Run Fmask
-fmask_sentinel2Stacked.py -o "$fmask" --safedir "$safedirectory"
+hlsfmask_sentinel2Stacked.py -o "$fmask" --strict --parallaxtest --safedir "$safedirectory"
 
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
