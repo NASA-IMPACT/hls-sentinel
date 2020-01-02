@@ -41,8 +41,9 @@ RUN cd ${SRC_DIR}/twohdf2one \
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 COPY ./scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
 
-COPY lasrc_sentinel_granule.sh ./usr/local/lasrc_sentinel_granule.sh
+COPY sentinel_granule.sh ${PREFIX}/sentinel_granule.sh
+COPY sentinel.sh ${PREFIX}/sentinel.sh
 
 ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["/usr/local/lasrc_sentinel_granule.sh"]
+CMD ["/usr/local/sentinel.sh"]
 
