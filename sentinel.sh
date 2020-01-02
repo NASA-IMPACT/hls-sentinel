@@ -10,7 +10,7 @@ workingdir="/tmp/${jobid}"
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
-mkdir "$workingdir"
+mkdir -p $workingdir
 
 # Create array from granulelist
 IFS=',' read -r -a granules <<< "$granulelist"
