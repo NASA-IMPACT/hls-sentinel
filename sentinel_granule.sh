@@ -4,6 +4,7 @@
 set -o errexit
 
 id="$1"
+# workingdir is obtained from variable in sentinel.sh
 granuledir="${workingdir}/${id}"
 safedirectory="${granuledir}/${id}.SAFE"
 safezip="${granuledir}/${id}.zip"
