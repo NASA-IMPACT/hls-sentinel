@@ -38,6 +38,15 @@ RUN cd ${SRC_DIR}/twohdf2one \
     && cd $SRC_DIR \
     && rm -rf twohdf2one
 
+# Move and compile consolidate
+COPY ./hls_libs/consolidate ${SRC_DIR}/consolidate
+RUN cd ${SRC_DIR}/consolidate \
+    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make clean \
+    && make install \
+    && cd $SRC_DIR \
+    && rm -rf consolidate
+
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 COPY ./scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
 
