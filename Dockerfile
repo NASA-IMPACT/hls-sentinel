@@ -48,10 +48,9 @@ RUN cd ${SRC_DIR}/consolidate \
     && rm -rf consolidate
 
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
-COPY ./scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
+COPY ./python_scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
 
-COPY sentinel_granule.sh ${PREFIX}/bin/sentinel_granule.sh
-COPY sentinel.sh ${PREFIX}/bin/sentinel.sh
+COPY ./scripts ${PREFIX}/bin
 
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["sentinel.sh"]
