@@ -10,12 +10,12 @@ safedirectory="${granuledir}/${id}.SAFE"
 safezip="${granuledir}/${id}.zip"
 fmask="${granuledir}/fmask.img"
 fmaskbin="${granuledir}/fmask.bin"
-bucket=$OUTPUT_BUCKET
 
 IFS='_'
 # Read into an array as tokens separated by IFS
 read -ra ADDR <<< "$id"
-mkdir "$granuledir"
+
+mkdir -p "$granuledir"
 
 # Format GCS url and download
 url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${id}.SAFE
@@ -67,8 +67,6 @@ twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_
 addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
 
 cd "$granuledir"
-# Copy files to S3
-aws s3 sync . "s3://${bucket}/${id}/"
 
 # Echo output file
 echo "${granuledir}/${hls_sr_output_hdf}"
