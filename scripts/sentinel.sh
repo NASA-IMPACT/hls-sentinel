@@ -1,4 +1,4 @@
-#!/bin/bash
+#/bin/bash
 
 # Exit on any error
 set -o errexit
@@ -14,6 +14,7 @@ trap "rm -rf $workingdir; exit" INT TERM EXIT
 # Create workingdir
 mkdir -p $workingdir
 
+echo "Start processing granules"
 # Create array from granulelist
 IFS=','
 read -r -a granules <<< "$granulelist"
@@ -23,20 +24,28 @@ if [ "${#granules[@]}" = 2 ]; then
 	IFS='_'
 	read -ra granulename <<< "${granules[0]}"
   outputname="${granulename[0]}_${granulename[1]}_${granulename[2]}_${granulename[3]}_${granulename[4]}_${granulename[5]}"
-  # Process each granule in granulelist
-  consolidatelist=()
+  # Process each granule in granulelist and build the consolidatelist
+  consolidatelist=""
   for granule in "${granules[@]}"; do
-    granuleoutput=$(source sentinel_granule.sh "$granule")
-    consolidatelist+=(" ${granuleoutput}")
+    # granuleoutput=$(source sentinel_granule.sh "$granule")
+    source sentinel_granule.sh "$granule"
+    granuleoutput="${workingdir}/${granule}/${granule}_sr_output.hdf"
+    if [ "${#consolidatelist}" = 0 ]; then
+      consolidatelist="${granuleoutput}"
+    else
+      consolidatelist="${consolidatelist} ${granuleoutput}"
+    fi
   done
-  echo "Running consolidate on ${consolidatelist[@]}"
-  consolidate "${consolidatelist[@]}" "${workingdir}/${outputname}.hdf"
+  echo "Running consolidate on ${consolidatelist}"
+  consolidate_command="consolidate ${consolidatelist} ${workingdir}/${outputname}.hdf"
+  eval "$consolidate_command"
 else
+  # If it is a single granule, just copy the granule output and do not consolidate
 	IFS='_'
 	read -ra granulename <<< "$granulelist"
   outputname="${granulename[0]}_${granulename[1]}_${granulename[2]}_${granulename[3]}_${granulename[4]}_${granulename[5]}"
-  granuleoutput=$(source sentinel_granule.sh "$granule")
+  granuleoutput=$(source sentinel_granule.sh "$granulelist")
   mv granuleoutput "${workingdir}/${outputname}.hdf"
 fi
 
-aws s3 copy "${workingdir}/${outputname}.hdf" "s3://${bucket}/${outputname}/${outputname}.hdf"
+aws s3 cp "${workingdir}/${outputname}.hdf" "s3://${bucket}/${outputname}/${outputname}.hdf"

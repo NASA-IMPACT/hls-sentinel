@@ -27,7 +27,7 @@ hlsfmask_sentinel2Stacked.py -o "$fmask" --strict --parallaxtest --safedir "$saf
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
-# # Zips and unpacks S2 SAFE directory.  The ESA SAFE data will be provided zipped.
+# Zips and unpacks S2 SAFE directory.  The ESA SAFE data will be provided zipped.
 cd "$granuledir"
 zip -r "$safezip" "${id}.SAFE"
 rm -rf "${id}.SAFE"
@@ -50,7 +50,7 @@ hls_espa_two_xml="${espa_id}_2_hls.xml"
 sr_hdf_one="${espa_id}_sr_1.hdf"
 sr_hdf_two="${espa_id}_sr_2.hdf"
 hls_sr_combined_hdf="${espa_id}_sr_combined.hdf"
-hls_sr_output_hdf="${id}_sr_output.hdf"
+hls_sr_output_hdf="${granuledir}/${id}_sr_output.hdf"
 
 # Create ESPA xml files using HLS v1.5 band names.
 create_sr_hdf_file.py -i "$espa_xml" -o "$hls_espa_one_xml" -f one
@@ -66,7 +66,6 @@ twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_
 # Run addFmaskSDS
 addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
 
-cd "$granuledir"
+# Remove intermediate files.
+rm -rf "$safedirectory"
 
-# Echo output file
-echo "${granuledir}/${hls_sr_output_hdf}"
