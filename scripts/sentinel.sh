@@ -18,7 +18,7 @@ echo "Start processing granules"
 # Create array from granulelist
 IFS=','
 read -r -a granules <<< "$granulelist"
-# Consolidate twin granules if necessary, if not rename the granule ouput.
+# Consolidate twin granules if necessary.
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
 	IFS='_'
@@ -41,10 +41,12 @@ if [ "${#granules[@]}" = 2 ]; then
 else
   # If it is a single granule, just copy the granule output and do not consolidate
 	IFS='_'
-	read -ra granulename <<< "$granulelist"
+  granule="$granulelist"
+	read -ra granulename <<< "$granule"
   outputname="${granulename[0]}_${granulename[1]}_${granulename[2]}_${granulename[3]}_${granulename[4]}_${granulename[5]}"
-  granuleoutput=$(source sentinel_granule.sh "$granulelist")
-  mv granuleoutput "${workingdir}/${outputname}.hdf"
+  source sentinel_granule.sh
+  granuleoutput="${workingdir}/${granule}/${granule}_sr_output.hdf"
+  mv "$granuleoutput" "${workingdir}/${outputname}.hdf"
 fi
 
 aws s3 cp "${workingdir}/${outputname}.hdf" "s3://${bucket}/${outputname}/${outputname}.hdf"
