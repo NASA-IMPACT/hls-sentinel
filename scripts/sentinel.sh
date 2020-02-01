@@ -27,8 +27,7 @@ if [ "${#granules[@]}" = 2 ]; then
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   for granule in "${granules[@]}"; do
-    # granuleoutput=$(source sentinel_granule.sh "$granule")
-    source sentinel_granule.sh "$granule"
+    source sentinel_granule.sh
     granuleoutput="${workingdir}/${granule}/${granule}_sr_output.hdf"
     if [ "${#consolidatelist}" = 0 ]; then
       consolidatelist="${granuleoutput}"

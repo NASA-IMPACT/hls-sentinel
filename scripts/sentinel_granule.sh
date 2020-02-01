@@ -3,8 +3,8 @@
 # Exit on any error
 set -o errexit
 
-id="$1"
-# workingdir is obtained from variable in sentinel.sh
+# workingdir and granule are obtained from variable in sentinel.sh
+id="$granule"
 granuledir="${workingdir}/${id}"
 safedirectory="${granuledir}/${id}.SAFE"
 safezip="${granuledir}/${id}.zip"
@@ -67,5 +67,5 @@ twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_
 addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
 
 # Remove intermediate files.
-rm -rf "$safedirectory"
+# rm -rf "$safedirectory"
 
