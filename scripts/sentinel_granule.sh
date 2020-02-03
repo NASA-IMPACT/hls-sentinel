@@ -8,7 +8,6 @@ id="$granule"
 granuledir="${workingdir}/${id}"
 safedirectory="${granuledir}/${id}.SAFE"
 safezip="${granuledir}/${id}.zip"
-fmask="${granuledir}/fmask.img"
 fmaskbin="${granuledir}/fmask.bin"
 
 IFS='_'
@@ -21,8 +20,15 @@ mkdir -p "$granuledir"
 url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${id}.SAFE
 gsutil -m cp -r "$url" "$granuledir"
 
+# Get GRANULE sub directory for Fmask
+grandir_id=$(get_s2_granule_dir.py -i "${safedirectory}")
+safegranuledir="${safedirectory}/GRANULE/${grandir_id}"
+cd "$safegranuledir"
+
 # Run Fmask
-hlsfmask_sentinel2Stacked.py -o "$fmask" --strict --parallaxtest --safedir "$safedirectory"
+/usr/local/MATLAB/application/run_Fmask_4_0.sh /usr/local/MATLAB/v95
+fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
+# hlsfmask_sentinel2Stacked.py -o "$fmask" --strict --parallaxtest --safedir "$safedirectory"
 
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
@@ -68,4 +74,3 @@ addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "
 
 # Remove intermediate files.
 # rm -rf "$safedirectory"
-

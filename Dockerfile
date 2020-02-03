@@ -1,5 +1,5 @@
 ARG AWS_ACCOUNT_ID
-FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base:latest
+FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base-matlab:latest
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -48,9 +48,10 @@ RUN cd ${SRC_DIR}/consolidate \
     && rm -rf consolidate
 
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
-COPY ./python_scripts/create_sr_hdf_file.py ${PREFIX}/bin/create_sr_hdf_file.py
 
-COPY ./scripts ${PREFIX}/bin
+COPY ./python_scripts/* ${PREFIX}/bin/
+
+COPY ./scripts/* ${PREFIX}/bin/
 
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["sentinel.sh"]
