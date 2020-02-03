@@ -14,6 +14,13 @@ trap "rm -rf $workingdir; exit" INT TERM EXIT
 # Create workingdir
 mkdir -p $workingdir
 
+set_outputname () {
+  # Use the base SAFE name without the unique id for the output file name.
+	IFS='_'
+	read -ra granulecomponents <<< "$1"
+  outputname="${granulecomponents[0]}_${granulecomponents[1]}_${granulecomponents[2]}_${granulecomponents[3]}_${granulecomponents[4]}_${granulecomponents[5]}"
+}
+
 echo "Start processing granules"
 # Create array from granulelist
 IFS=','
@@ -21,9 +28,7 @@ read -r -a granules <<< "$granulelist"
 # Consolidate twin granules if necessary.
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
-	IFS='_'
-	read -ra granulename <<< "${granules[0]}"
-  outputname="${granulename[0]}_${granulename[1]}_${granulename[2]}_${granulename[3]}_${granulename[4]}_${granulename[5]}"
+  set_outputname "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   for granule in "${granules[@]}"; do
@@ -40,10 +45,8 @@ if [ "${#granules[@]}" = 2 ]; then
   eval "$consolidate_command"
 else
   # If it is a single granule, just copy the granule output and do not consolidate
-	IFS='_'
   granule="$granulelist"
-	read -ra granulename <<< "$granule"
-  outputname="${granulename[0]}_${granulename[1]}_${granulename[2]}_${granulename[3]}_${granulename[4]}_${granulename[5]}"
+  set_outputname "$granule"
   source sentinel_granule.sh
   granuleoutput="${workingdir}/${granule}/${granule}_sr_output.hdf"
   mv "$granuleoutput" "${workingdir}/${outputname}.hdf"
