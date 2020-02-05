@@ -35,7 +35,7 @@ gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
 # Zips and unpacks S2 SAFE directory.  The ESA SAFE data will be provided zipped.
 cd "$granuledir"
-zip -r "$safezip" "${id}.SAFE"
+zip -r -q "$safezip" "${id}.SAFE"
 rm -rf "${id}.SAFE"
 unpackage_s2.py -i "$safezip" -o "$granuledir"
 rm "$safezip"
@@ -73,4 +73,5 @@ twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_
 addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
 
 # Remove intermediate files.
-# rm -rf "$safedirectory"
+cd "$granuledir"
+rm -rf "$safedirectory"
