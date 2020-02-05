@@ -9,6 +9,8 @@ granuledir="${workingdir}/${id}"
 safedirectory="${granuledir}/${id}.SAFE"
 safezip="${granuledir}/${id}.zip"
 fmaskbin="${granuledir}/fmask.bin"
+detfoo="${granuledir}/detfoo.hdf"
+angle="${granuledir}/angle.hdf"
 
 IFS='_'
 # Read into an array as tokens separated by IFS
@@ -20,15 +22,21 @@ mkdir -p "$granuledir"
 url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${id}.SAFE
 gsutil -m cp -r "$url" "$granuledir"
 
-# Get GRANULE sub directory for Fmask
+# Get GRANULE sub directory
 grandir_id=$(get_s2_granule_dir.py -i "${safedirectory}")
 safegranuledir="${safedirectory}/GRANULE/${grandir_id}"
-cd "$safegranuledir"
 
+# Run derive_s2ang
+xml=$(find "$safegranuledir" -maxdepth 1 -type f -name "*.xml")
+detfoo_gml=$(find "${safegranuledir}/QI_DATA" -maxdepth 1 -type f -name "*DETFOO*_B01*.gml")
+echo "Running derive_s2ang"
+derive_s2ang "$xml" "$detfoo_gml" "$detfoo" "$angle"
+rm "$detfoo"
+
+cd "$safegranuledir"
 # Run Fmask
 /usr/local/MATLAB/application/run_Fmask_4_0.sh /usr/local/MATLAB/v95
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
-# hlsfmask_sentinel2Stacked.py -o "$fmask" --strict --parallaxtest --safedir "$safedirectory"
 
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
