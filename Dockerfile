@@ -47,6 +47,15 @@ RUN cd ${SRC_DIR}/consolidate \
     && cd $SRC_DIR \
     && rm -rf consolidate
 
+# Move and compile derive_s2ang
+COPY ./hls_libs/derive_s2ang ${SRC_DIR}/derive_s2ang
+RUN cd ${SRC_DIR}/derive_s2ang \
+    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make clean \
+    && make install \
+    && cd $SRC_DIR \
+    && rm -rf derive_s2ang
+
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 
 COPY ./python_scripts/* ${PREFIX}/bin/
