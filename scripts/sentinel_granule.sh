@@ -3,23 +3,21 @@
 # Exit on any error
 set -o errexit
 
-# workingdir and granule are obtained from variable in sentinel.sh
-id="$granule"
-granuledir="${workingdir}/${id}"
-safedirectory="${granuledir}/${id}.SAFE"
-safezip="${granuledir}/${id}.zip"
+# granule and granuledir variable set in sentinel.sh
+safedirectory="${granuledir}/${granule}.SAFE"
+safezip="${granuledir}/${granule}.zip"
+# Intermediate outputs.
 fmaskbin="${granuledir}/fmask.bin"
 detfoo="${granuledir}/detfoo.hdf"
-angle="${granuledir}/angle.hdf"
 
 IFS='_'
 # Read into an array as tokens separated by IFS
-read -ra ADDR <<< "$id"
+read -ra ADDR <<< "$granule"
 
 mkdir -p "$granuledir"
 
 # Format GCS url and download
-url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${id}.SAFE
+url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${granule}.SAFE
 gsutil -m cp -r "$url" "$granuledir"
 
 # Get GRANULE sub directory
@@ -27,10 +25,17 @@ grandir_id=$(get_s2_granule_dir.py -i "${safedirectory}")
 safegranuledir="${safedirectory}/GRANULE/${grandir_id}"
 
 # Run derive_s2ang
+
+# For new SAFE format locate MTD_MSIL1C.xml
+# For older SAFE formata locate S2[A|B]_OPER_MTD_*.xml
 xml=$(find "$safegranuledir" -maxdepth 1 -type f -name "*.xml")
+
+# Locate DETFOO gml for Band 01.  derive_s2ang will then infer names for other bands
 detfoo_gml=$(find "${safegranuledir}/QI_DATA" -maxdepth 1 -type f -name "*DETFOO*_B01*.gml")
 echo "Running derive_s2ang"
-derive_s2ang "$xml" "$detfoo_gml" "$detfoo" "$angle"
+derive_s2ang "$xml" "$detfoo_gml" "$detfoo" "$angleoutput"
+
+# The detfoo output is an unneccesary legacy output
 rm "$detfoo"
 
 cd "$safegranuledir"
@@ -43,8 +48,8 @@ gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
 # Zips and unpacks S2 SAFE directory.  The ESA SAFE data will be provided zipped.
 cd "$granuledir"
-zip -r -q "$safezip" "${id}.SAFE"
-rm -rf "${id}.SAFE"
+zip -r -q "$safezip" "${granule}.SAFE"
+rm -rf "${granule}.SAFE"
 unpackage_s2.py -i "$safezip" -o "$granuledir"
 rm "$safezip"
 
@@ -64,7 +69,8 @@ hls_espa_two_xml="${espa_id}_2_hls.xml"
 sr_hdf_one="${espa_id}_sr_1.hdf"
 sr_hdf_two="${espa_id}_sr_2.hdf"
 hls_sr_combined_hdf="${espa_id}_sr_combined.hdf"
-hls_sr_output_hdf="${granuledir}/${id}_sr_output.hdf"
+# Surface reflectance is current final output
+hls_sr_output_hdf="$granuleoutput"
 
 # Create ESPA xml files using HLS v1.5 band names.
 create_sr_hdf_file.py -i "$espa_xml" -o "$hls_espa_one_xml" -f one
