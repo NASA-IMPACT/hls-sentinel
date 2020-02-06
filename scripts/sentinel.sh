@@ -31,25 +31,39 @@ if [ "${#granules[@]}" = 2 ]; then
   set_outputname "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
+  consolidate_angle_list=""
   for granule in "${granules[@]}"; do
+    granuledir="${workingdir}/${granule}"
+    angleoutput="${granuledir}/angle.hdf"
+    granuleoutput="${granuledir}/output.hdf"
     source sentinel_granule.sh
-    granuleoutput="${workingdir}/${granule}/${granule}_sr_output.hdf"
+    # Build list of outputs and angleoutputs to consolidate
     if [ "${#consolidatelist}" = 0 ]; then
       consolidatelist="${granuleoutput}"
+      consolidate_angle_list="${angleoutput}"
     else
       consolidatelist="${consolidatelist} ${granuleoutput}"
+      consolidate_angle_list="${consolidate_angle_list} ${angleoutput}"
     fi
   done
   echo "Running consolidate on ${consolidatelist}"
   consolidate_command="consolidate ${consolidatelist} ${workingdir}/${outputname}.hdf"
+  consolidate_angle_command="consolidate_s2ang ${consolidate_angle_list} ${workingdir}/${outputname}_angle.hdf"
   eval "$consolidate_command"
+  eval "$consolidate_angle_command"
 else
   # If it is a single granule, just copy the granule output and do not consolidate
   granule="$granulelist"
   set_outputname "$granule"
+
+  granuledir="${workingdir}/${granule}"
+  angleoutput="${granuledir}/angle.hdf"
+  granuleoutput="${granuledir}/output.hdf"
+
   source sentinel_granule.sh
-  granuleoutput="${workingdir}/${granule}/${granule}_sr_output.hdf"
   mv "$granuleoutput" "${workingdir}/${outputname}.hdf"
+  mv "$angleoutput" "${workingdir}/${outputname}_angle.hdf"
 fi
 
 aws s3 cp "${workingdir}/${outputname}.hdf" "s3://${bucket}/${outputname}/${outputname}.hdf"
+aws s3 cp "${workingdir}/${outputname}_angle.hdf" "s3://${bucket}/${outputname}/${outputname}_angle.hdf"
