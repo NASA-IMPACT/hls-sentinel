@@ -29,13 +29,14 @@ read -r -a granules <<< "$granulelist"
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
   set_outputname "${granules[0]}"
+
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
   for granule in "${granules[@]}"; do
     granuledir="${workingdir}/${granule}"
     angleoutput="${granuledir}/angle.hdf"
-    granuleoutput="${granuledir}/output.hdf"
+    granuleoutput="${granuledir}/sr.hdf"
     source sentinel_granule.sh
     # Build list of outputs and angleoutputs to consolidate
     if [ "${#consolidatelist}" = 0 ]; then
@@ -47,23 +48,30 @@ if [ "${#granules[@]}" = 2 ]; then
     fi
   done
   echo "Running consolidate on ${consolidatelist}"
-  consolidate_command="consolidate ${consolidatelist} ${workingdir}/${outputname}.hdf"
-  consolidate_angle_command="consolidate_s2ang ${consolidate_angle_list} ${workingdir}/${outputname}_angle.hdf"
+  consolidate_output="${workingdir}/${outputname}_consolidate.hdf"
+  consolidate_angle_output="${workingdir}/${outputname}_consolidate_angle.hdf"
+  consolidate_command="consolidate ${consolidatelist} ${consolidate_output}"
+  consolidate_angle_command="consolidate_s2ang ${consolidate_angle_list} ${consolidate_angle_output}"
   eval "$consolidate_command"
   eval "$consolidate_angle_command"
+  # Use the consolidate output as loop process output for next stage.
+  angleoutput="$consolidate_angle_output"
+  granuleoutput="$consolidate_output"
 else
-  # If it is a single granule, just copy the granule output and do not consolidate
+  # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
   set_outputname "$granule"
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
-  granuleoutput="${granuledir}/output.hdf"
+  granuleoutput="${granuledir}/sr.hdf"
 
   source sentinel_granule.sh
-  mv "$granuleoutput" "${workingdir}/${outputname}.hdf"
-  mv "$angleoutput" "${workingdir}/${outputname}_angle.hdf"
 fi
 
-aws s3 cp "${workingdir}/${outputname}.hdf" "s3://${bucket}/${outputname}/${outputname}.hdf"
-aws s3 cp "${workingdir}/${outputname}_angle.hdf" "s3://${bucket}/${outputname}/${outputname}_angle.hdf"
+output="${workingdir}/${outputname}.hdf"
+# Resample to 30m
+create_s2_at30m "$granuleoutput" "${output}"
+
+aws s3 cp "${output}" "s3://${bucket}/${outputname}/${outputname}.hdf"
+aws s3 cp "${angleoutput}" "s3://${bucket}/${outputname}/${outputname}_angle.hdf"
