@@ -65,6 +65,15 @@ RUN cd ${SRC_DIR}/consolidate_s2ang \
     && cd $SRC_DIR \
     && rm -rf consolidate_s2ang
 
+# Move and compile create_s2at30m
+COPY ./hls_libs/create_s2at30m ${SRC_DIR}/create_s2at30m
+RUN cd ${SRC_DIR}/create_s2at30m \
+    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make clean \
+    && make install \
+    && cd $SRC_DIR \
+    && rm -rf create_s2at30m
+
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 
 COPY ./python_scripts/* ${PREFIX}/bin/
