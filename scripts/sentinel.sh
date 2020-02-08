@@ -12,7 +12,7 @@ workingdir="/tmp/${jobid}"
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
-mkdir -p $workingdir
+mkdir -p "$workingdir"
 
 set_outputname () {
   # Use the base SAFE name without the unique id for the output file name.
@@ -40,7 +40,7 @@ read -r -a granules <<< "$granulelist"
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
   set_outputname "${granules[0]}"
-  set_output "${granules[0]}"
+  set_nbar_input "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
@@ -72,7 +72,7 @@ else
   # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
   set_outputname "$granule"
-  set_output "$granule"
+  set_nbar_input "$granule"
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
