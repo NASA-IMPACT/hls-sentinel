@@ -21,6 +21,17 @@ set_outputname () {
   outputname="${granulecomponents[0]}_${granulecomponents[1]}_${granulecomponents[2]}_${granulecomponents[3]}_${granulecomponents[4]}_${granulecomponents[5]}"
 }
 
+# The derive_s2nbar C code infers values from the input file name so this
+# formatting is necessary.  This implicit name requirement is not documented
+# anywhere!
+set_nbar_input () {
+	IFS='_'
+	read -ra granulecomponents <<< "$1"
+  # The required format is
+  # HLS.S30.T${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdf
+  nbar_input="${workingdir}/HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.nbar.1.5.hdf"
+}
+
 echo "Start processing granules"
 # Create array from granulelist
 IFS=','
@@ -29,7 +40,7 @@ read -r -a granules <<< "$granulelist"
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
   set_outputname "${granules[0]}"
-
+  set_output "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
@@ -61,6 +72,7 @@ else
   # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
   set_outputname "$granule"
+  set_output "$granule"
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
@@ -69,9 +81,17 @@ else
   source sentinel_granule.sh
 fi
 
-output="${workingdir}/${outputname}.hdf"
 # Resample to 30m
-create_s2_at30m "$granuleoutput" "${output}"
+echo "Running create_s2at30m"
+resample30m="${workingdir}/${outputname}_resample30m.hdf"
+create_s2at30m "$granuleoutput" "$resample30m"
 
-aws s3 cp "${output}" "s3://${bucket}/${outputname}/${outputname}.hdf"
-aws s3 cp "${angleoutput}" "s3://${bucket}/${outputname}/${outputname}_angle.hdf"
+# Move the resample output to nbar naming.
+mv "$resample30m" "$nbar_input"
+
+# Nbar
+echo "Running derive_s2nbar"
+cfactor="${workingdir}/cfactor.hdf"
+derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
+
+aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${outputname}_nbar.hdf"
