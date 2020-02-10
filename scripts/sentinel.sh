@@ -94,6 +94,7 @@ echo "Running create_s2at30m"
 resample30m="${workingdir}/${outputname}_resample30m.hdf"
 create_s2at30m "$granuleoutput" "$resample30m"
 
+# Unlike all the other C libs, derive_s2nbar and L8like modify the input file
 # Move the resample output to nbar naming.
 mv "$resample30m" "$nbar_input"
 
