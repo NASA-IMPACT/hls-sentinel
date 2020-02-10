@@ -83,6 +83,18 @@ RUN cd ${SRC_DIR}/derive_s2nbar \
     && cd $SRC_DIR \
     && rm -rf derive_s2nbar
 
+# Move and compile L8like
+COPY ./hls_libs/L8like ${SRC_DIR}/L8like
+RUN cd ${SRC_DIR}/L8like \
+    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make clean \
+    && make install \
+    && cd $SRC_DIR \
+    && rm -rf L8like
+
+COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S2A.txt
+COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
+
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 
 COPY ./python_scripts/* ${PREFIX}/bin/
