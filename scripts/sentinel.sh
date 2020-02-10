@@ -12,13 +12,24 @@ workingdir="/tmp/${jobid}"
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
-mkdir -p $workingdir
+mkdir -p "$workingdir"
 
 set_outputname () {
   # Use the base SAFE name without the unique id for the output file name.
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
   outputname="${granulecomponents[0]}_${granulecomponents[1]}_${granulecomponents[2]}_${granulecomponents[3]}_${granulecomponents[4]}_${granulecomponents[5]}"
+}
+
+# The derive_s2nbar C code infers values from the input file name so this
+# formatting is necessary.  This implicit name requirement is not documented
+# anywhere!
+set_nbar_input () {
+	IFS='_'
+	read -ra granulecomponents <<< "$1"
+  # The required format is
+  # HLS.S30.T${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdf
+  nbar_input="${workingdir}/HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.nbar.1.5.hdf"
 }
 
 echo "Start processing granules"
@@ -29,13 +40,14 @@ read -r -a granules <<< "$granulelist"
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
   set_outputname "${granules[0]}"
+  set_nbar_input "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
   for granule in "${granules[@]}"; do
     granuledir="${workingdir}/${granule}"
     angleoutput="${granuledir}/angle.hdf"
-    granuleoutput="${granuledir}/output.hdf"
+    granuleoutput="${granuledir}/sr.hdf"
     source sentinel_granule.sh
     # Build list of outputs and angleoutputs to consolidate
     if [ "${#consolidatelist}" = 0 ]; then
@@ -47,23 +59,39 @@ if [ "${#granules[@]}" = 2 ]; then
     fi
   done
   echo "Running consolidate on ${consolidatelist}"
-  consolidate_command="consolidate ${consolidatelist} ${workingdir}/${outputname}.hdf"
-  consolidate_angle_command="consolidate_s2ang ${consolidate_angle_list} ${workingdir}/${outputname}_angle.hdf"
+  consolidate_output="${workingdir}/${outputname}_consolidate.hdf"
+  consolidate_angle_output="${workingdir}/${outputname}_consolidate_angle.hdf"
+  consolidate_command="consolidate ${consolidatelist} ${consolidate_output}"
+  consolidate_angle_command="consolidate_s2ang ${consolidate_angle_list} ${consolidate_angle_output}"
   eval "$consolidate_command"
   eval "$consolidate_angle_command"
+  # Use the consolidate output as loop process output for next stage.
+  angleoutput="$consolidate_angle_output"
+  granuleoutput="$consolidate_output"
 else
-  # If it is a single granule, just copy the granule output and do not consolidate
+  # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
   set_outputname "$granule"
+  set_nbar_input "$granule"
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
-  granuleoutput="${granuledir}/output.hdf"
+  granuleoutput="${granuledir}/sr.hdf"
 
   source sentinel_granule.sh
-  mv "$granuleoutput" "${workingdir}/${outputname}.hdf"
-  mv "$angleoutput" "${workingdir}/${outputname}_angle.hdf"
 fi
 
-aws s3 cp "${workingdir}/${outputname}.hdf" "s3://${bucket}/${outputname}/${outputname}.hdf"
-aws s3 cp "${workingdir}/${outputname}_angle.hdf" "s3://${bucket}/${outputname}/${outputname}_angle.hdf"
+# Resample to 30m
+echo "Running create_s2at30m"
+resample30m="${workingdir}/${outputname}_resample30m.hdf"
+create_s2at30m "$granuleoutput" "$resample30m"
+
+# Move the resample output to nbar naming.
+mv "$resample30m" "$nbar_input"
+
+# Nbar
+echo "Running derive_s2nbar"
+cfactor="${workingdir}/cfactor.hdf"
+derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
+
+aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${outputname}_nbar.hdf"
