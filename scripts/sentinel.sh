@@ -32,6 +32,12 @@ set_nbar_input () {
   nbar_input="${workingdir}/HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.nbar.1.5.hdf"
 }
 
+set_bandpass_output_name () {
+	IFS='_'
+	read -ra granulecomponents <<< "$1"
+  bandpass_output_name="HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.1.5.hdf"
+}
+
 echo "Start processing granules"
 # Create array from granulelist
 IFS=','
@@ -41,6 +47,7 @@ if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
   set_outputname "${granules[0]}"
   set_nbar_input "${granules[0]}"
+  set_bandpass_output_name "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
@@ -73,6 +80,7 @@ else
   granule="$granulelist"
   set_outputname "$granule"
   set_nbar_input "$granule"
+  set_bandpass_output_name "$granule"
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
@@ -94,4 +102,10 @@ echo "Running derive_s2nbar"
 cfactor="${workingdir}/cfactor.hdf"
 derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
 
-aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${outputname}_nbar.hdf"
+# Bandpass
+echo "Running L8like"
+sensor="${outputname:0:3}"
+parameter="/usr/local/bandpass_parameter.${sensor}.txt"
+L8like "$parameter" "$nbar_input"
+
+aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${bandpass_output_name}"
