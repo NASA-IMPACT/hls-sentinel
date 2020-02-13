@@ -29,13 +29,16 @@ set_nbar_input () {
 	read -ra granulecomponents <<< "$1"
   # The required format is
   # HLS.S30.T${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdf
-  nbar_input="${workingdir}/HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.nbar.1.5.hdf"
+  nbar_name=HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.nbar.v1.5
+  nbar_input="${workingdir}/${nbar_name}.hdf"
+  nbar_hdr="${nbar_input}.hdr"
 }
 
 set_bandpass_output_name () {
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
-  bandpass_output_name="HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.1.5.hdf"
+  bandpass_output="HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.v1.5.hdf"
+  bandpass_hdr="${bandpass_output}.hdr"
 }
 
 echo "Start processing granules"
@@ -92,10 +95,13 @@ fi
 # Resample to 30m
 echo "Running create_s2at30m"
 resample30m="${workingdir}/${outputname}_resample30m.hdf"
+resample30m_hdr="${resample30m}.hdr"
 create_s2at30m "$granuleoutput" "$resample30m"
 
+# Unlike all the other C libs, derive_s2nbar and L8like modify the input file
 # Move the resample output to nbar naming.
 mv "$resample30m" "$nbar_input"
+mv "$resample30m_hdr" "$nbar_hdr"
 
 # Nbar
 echo "Running derive_s2nbar"
@@ -108,4 +114,6 @@ sensor="${outputname:0:3}"
 parameter="/usr/local/bandpass_parameter.${sensor}.txt"
 L8like "$parameter" "$nbar_input"
 
-aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${bandpass_output_name}"
+# Copy final bandpass output to S3.
+aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${bandpass_output}"
+aws s3 cp "$nbar_hdr" "s3://${bucket}/${outputname}/${bandpass_hdr}"
