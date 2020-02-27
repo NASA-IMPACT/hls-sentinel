@@ -2,13 +2,11 @@
 import sys, getopt
 import datetime
 
-ERROR = 1
-SUCCESS = 0
 
 def main(argv):
     year = ''
-    month = '' 
-    day = '' 
+    month = ''
+    day = ''
     try:
         opts, args = getopt.getopt(argv,"y:m:d:h",["year=","month=","day="])
     except getopt.GetoptError:
