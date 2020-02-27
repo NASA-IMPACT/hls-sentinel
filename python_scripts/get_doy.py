@@ -24,7 +24,8 @@ def main(argv):
             day = int(arg.lstrip("0"))
     date = datetime.date(year, month, day)
     day_of_year = date.timetuple().tm_yday
-    sys.stdout.write(str(day_of_year))
+    # derive_s2nbar requires a three digit doy
+    sys.stdout.write(str(day_of_year).zfill(3))
 
 if __name__ == "__main__":
     main(sys.argv[1:])
