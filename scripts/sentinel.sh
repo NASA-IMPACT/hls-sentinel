@@ -28,8 +28,13 @@ set_nbar_input () {
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
   # The required format is
-  # HLS.S30.T${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdf
-  nbar_name=HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.nbar.v1.5
+  # HLS.S30.${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdr
+  date=${granulecomponents[2]:0:8}
+  year=${date:0:4}
+  month=${date:4:2}
+  day=${date:6:2}
+  day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
+  nbar_name=HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${granulecomponents[6]}.nbar.v1.5
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
 }
@@ -37,7 +42,7 @@ set_nbar_input () {
 set_bandpass_output_name () {
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
-  bandpass_output="HLS.S30.T${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.v1.5.hdf"
+  bandpass_output="HLS.S30.${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.v1.5.hdf"
   bandpass_hdr="${bandpass_output}.hdr"
 }
 
