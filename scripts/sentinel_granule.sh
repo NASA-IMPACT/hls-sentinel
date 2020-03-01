@@ -3,9 +3,11 @@
 # Exit on any error
 set -o errexit
 
-# granule and granuledir variable set in sentinel.sh
+# granule, granuledir, inputbucket, angleoutput, granuleoutput variable set in sentinel.sh
 safedirectory="${granuledir}/${granule}.SAFE"
 safezip="${granuledir}/${granule}.zip"
+inputgranule="s3://${inputbucket}/${granule}.zip"
+
 # Intermediate outputs.
 fmaskbin="${granuledir}/fmask.bin"
 detfoo="${granuledir}/detfoo.hdf"
@@ -17,8 +19,12 @@ read -ra ADDR <<< "$granule"
 mkdir -p "$granuledir"
 
 # Format GCS url and download
-url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${granule}.SAFE
-gsutil -m cp -r "$url" "$granuledir"
+# url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${granule}.SAFE
+# gsutil -m cp -r "$url" "$granuledir"
+
+# Download granule from s3
+aws s3 cp "$inputgranule" "$safezip"
+unzip "$safezip" -d "$granuledir"
 
 # Get GRANULE sub directory
 grandir_id=$(get_s2_granule_dir.py -i "${safedirectory}")
@@ -48,8 +54,12 @@ gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
 # Zips and unpacks S2 SAFE directory.  The ESA SAFE data will be provided zipped.
 cd "$granuledir"
-zip -r -q "$safezip" "${granule}.SAFE"
+# zip -r -q "$safezip" "${granule}.SAFE"
+
+# Removes previously unzipped SAFE directory for replacement with ESPA unpacking
+# result
 rm -rf "${granule}.SAFE"
+
 unpackage_s2.py -i "$safezip" -o "$granuledir"
 rm "$safezip"
 
