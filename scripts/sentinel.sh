@@ -6,6 +6,7 @@ set -o errexit
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
 bucket=$OUTPUT_BUCKET
+inputbucket=$INPUT_BUCKET
 workingdir="/tmp/${jobid}"
 
 # Remove tmp files on exit
