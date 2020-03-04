@@ -36,6 +36,14 @@ safegranuledir="${safedirectory}/GRANULE/${grandir_id}"
 # For older SAFE formata locate S2[A|B]_OPER_MTD_*.xml
 xml=$(find "$safegranuledir" -maxdepth 1 -type f -name "*.xml")
 
+# Check solar zenith angle.
+echo "Check solar azimuth"
+solar_zenith_valid=$(check_solar_zenith.py -i "$xml")
+if [ "$solar_zenith_valid" == "invalid" ]; then
+  echo "Invalid solar zenith angle. Exiting now"
+  exit 1
+fi
+
 # Locate DETFOO gml for Band 01.  derive_s2ang will then infer names for other bands
 detfoo_gml=$(find "${safegranuledir}/QI_DATA" -maxdepth 1 -type f -name "*DETFOO*_B01*.gml")
 echo "Running derive_s2ang"
