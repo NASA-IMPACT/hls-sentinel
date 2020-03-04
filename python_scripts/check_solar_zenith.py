@@ -4,15 +4,15 @@ import libxml2
 
 
 def main(argv):
-    input_file = ''
-    valid = 0
+    input_file = ""
+    valid = "valid" 
     try:
         opts, args = getopt.getopt(argv,"i:h",["input_file="])
     except getopt.GetoptError:
-        print ('check_solar_zenith.py -i MTD_TL.xml')
+        print ("check_solar_zenith.py -i MTD_TL.xml")
         sys.exit(2)
     for opt, arg in opts:
-        if opt == '-h':
+        if opt == "-h":
             print ('check_solar_zenith.py -i MTD_TL.xml')
             sys.exit()
         elif opt in ("-i", "--input_file"):
@@ -21,12 +21,9 @@ def main(argv):
     context = doc.xpathNewContext()
     element = context.xpathEval("//Mean_Sun_Angle/ZENITH_ANGLE")
     solar_zenith = float(element[0].content)
-    print("Solar Zenith is %s" % solar_zenith)
     if (solar_zenith > 76):
-        print("Solar Zenith is greater than 76.  Exiting processing")
-        valid = 1
-
-    return valid
+        valid = "invalid"
+    sys.stdout.write(valid)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
