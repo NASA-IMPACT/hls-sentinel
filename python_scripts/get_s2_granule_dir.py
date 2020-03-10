@@ -4,9 +4,6 @@ import os
 import shutil
 import glob
 
-ERROR = 1
-SUCCESS = 0
-
 def main(argv):
     inputs2dir = ''
     try:
@@ -16,7 +13,7 @@ def main(argv):
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'test.py -i <inputs2dir>'
+            print 'get_s2_granule_dir.py -i <inputs2dir>'
             sys.exit()
         elif opt in ("-i", "--inputs2dir"):
             inputs2dir = arg
@@ -28,7 +25,6 @@ def main(argv):
     mtd_xml = os.path.join(inputs2dir, 'MTD_MSIL1C.xml')
     old_s2_format = False
     if not os.path.isfile(mtd_xml):
-        print('Processing older Sentinel-2 package...')
         old_s2_format = True
     found = False
     gran_dirs = glob.glob('{}/*'.format(granule_dir))
@@ -54,11 +50,7 @@ def main(argv):
         grandir_id = os.path.basename(os.path.normpath(prodid_dir))
         sys.stdout.write(grandir_id)
     else:
-        msg = ('Product ID directory under GRANULE was not found. Looking '
-                'for something similar to S2[A|B]_OPER_MSI_L1C_TL* under '
-                'the top-level .SAFE/GRANULE directory.')
-        print(msg)
-        return ERROR
+        sys.stdout.write("")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
