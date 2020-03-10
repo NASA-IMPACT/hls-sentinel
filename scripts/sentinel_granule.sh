@@ -41,7 +41,7 @@ echo "Check solar azimuth"
 solar_zenith_valid=$(check_solar_zenith.py -i "$xml")
 if [ "$solar_zenith_valid" == "invalid" ]; then
   echo "Invalid solar zenith angle. Exiting now"
-  exit 1
+  exit 3
 fi
 
 # Locate DETFOO gml for Band 01.  derive_s2ang will then infer names for other bands
