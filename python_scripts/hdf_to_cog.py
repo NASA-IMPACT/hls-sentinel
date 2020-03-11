@@ -21,7 +21,7 @@ Options:
 Example:
 $ python -m hdf_to_cog HLS.S30.T52SCG.2019253.v1.5.hdf --output-dir my-dir
 or
-$ pythin hdf_to_cog.py HLS.S30.T52SCG.2019253.v1.5.hdf --output-dir my-dir
+$ python hdf_to_cog.py HLS.S30.T52SCG.2019253.v1.5.hdf --output-dir my-dir
 
 """
 
@@ -114,8 +114,8 @@ def main(input, output_dir, cogeo_profile, blocksize, creation_options):
                     overview_resampling="nearest",
                     quiet=True,
                 )
-                with rasterio.open(output_name) as cog:
-                    assert cog_validate(cog)
+
+            assert cog_validate(output_name)
 
 
 if __name__ == "__main__":

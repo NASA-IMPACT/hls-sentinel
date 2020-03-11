@@ -97,7 +97,7 @@ COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S
 
 RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
 
-RUN pip install rio-cogeo==1.1.10 --no-binary rasterio
+RUN pip install rio-cogeo==1.1.10 --no-binary rasterio --user
 
 COPY ./python_scripts/* ${PREFIX}/bin/
 
