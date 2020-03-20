@@ -10,16 +10,25 @@ inputbucket=$INPUT_BUCKET
 workingdir="/tmp/${jobid}"
 
 # Remove tmp files on exit
-trap "rm -rf $workingdir; exit" INT TERM EXIT
+# trap "rm -rf $workingdir; exit" INT TERM EXIT
 
-# Create workingdir
-mkdir -p "$workingdir"
+# # Create workingdir
+# mkdir -p "$workingdir"
 
-set_outputname () {
+set_outputs () {
   # Use the base SAFE name without the unique id for the output file name.
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
-  outputname="${granulecomponents[0]}_${granulecomponents[1]}_${granulecomponents[2]}_${granulecomponents[3]}_${granulecomponents[4]}_${granulecomponents[5]}"
+
+  date=${granulecomponents[2]:0:8}
+  year=${date:0:4}
+  month=${date:4:2}
+  day=${date:6:2}
+  day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
+  outputname="HLS.S30.${granulecomponents[5]:1:5}.${year}${day_of_year}.v1.5"
+  output="${workingdir}/output/${outputname}"
+  output_hdr="${output}.hdr"
+  echo $output
 }
 
 # The derive_s2nbar C code infers values from the input file name so this
@@ -38,13 +47,8 @@ set_nbar_input () {
   nbar_name=HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${granulecomponents[6]}.nbar.v1.5
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
-}
-
-set_bandpass_output_name () {
-	IFS='_'
-	read -ra granulecomponents <<< "$1"
-  bandpass_output="HLS.S30.${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.v1.5.hdf"
-  bandpass_hdr="${bandpass_output}.hdr"
+  We also need to obtain the sensor for the Bandpass parameters file
+  sensor="${granulecomponents[0]:0:3}"
 }
 
 echo "Start processing granules"
@@ -54,9 +58,8 @@ read -r -a granules <<< "$granulelist"
 # Consolidate twin granules if necessary.
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
-  set_outputname "${granules[0]}"
+  set_outputs "${granules[0]}"
   set_nbar_input "${granules[0]}"
-  set_bandpass_output_name "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
@@ -75,8 +78,8 @@ if [ "${#granules[@]}" = 2 ]; then
     fi
   done
   echo "Running consolidate on ${consolidatelist}"
-  consolidate_output="${workingdir}/${outputname}_consolidate.hdf"
-  consolidate_angle_output="${workingdir}/${outputname}_consolidate_angle.hdf"
+  consolidate_output="${workingdir}/consolidate.hdf"
+  consolidate_angle_output="${workingdir}/consolidate_angle.hdf"
   consolidate_command="consolidate ${consolidatelist} ${consolidate_output}"
   consolidate_angle_command="consolidate_s2ang ${consolidate_angle_list} ${consolidate_angle_output}"
   eval "$consolidate_command"
@@ -87,39 +90,42 @@ if [ "${#granules[@]}" = 2 ]; then
 else
   # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
-  set_outputname "$granule"
+  set_outputs "$granule"
   set_nbar_input "$granule"
-  set_bandpass_output_name "$granule"
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
   granuleoutput="${granuledir}/sr.hdf"
 
-  source sentinel_granule.sh
+  # source sentinel_granule.sh
 fi
 
-# Resample to 30m
-echo "Running create_s2at30m"
-resample30m="${workingdir}/${outputname}_resample30m.hdf"
-resample30m_hdr="${resample30m}.hdr"
-create_s2at30m "$granuleoutput" "$resample30m"
+# # Resample to 30m
+# echo "Running create_s2at30m"
+# resample30m="${workingdir}/resample30m.hdf"
+# resample30m_hdr="${resample30m}.hdr"
+# create_s2at30m "$granuleoutput" "$resample30m"
 
-# Unlike all the other C libs, derive_s2nbar and L8like modify the input file
-# Move the resample output to nbar naming.
-mv "$resample30m" "$nbar_input"
-mv "$resample30m_hdr" "$nbar_hdr"
+# # Unlike all the other C libs, derive_s2nbar and L8like modify the input file
+# # Move the resample output to nbar naming.
+# mv "$resample30m" "$nbar_input"
+# mv "$resample30m_hdr" "$nbar_hdr"
 
-# Nbar
-echo "Running derive_s2nbar"
-cfactor="${workingdir}/cfactor.hdf"
-derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
+# # Nbar
+# echo "Running derive_s2nbar"
+# cfactor="${workingdir}/cfactor.hdf"
+# derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
 
-# Bandpass
-echo "Running L8like"
-sensor="${outputname:0:3}"
-parameter="/usr/local/bandpass_parameter.${sensor}.txt"
-L8like "$parameter" "$nbar_input"
+# # Bandpass
+# echo "Running L8like"
+# parameter="/usr/local/bandpass_parameter.${sensor}.txt"
+# L8like "$parameter" "$nbar_input"
 
-# Copy final bandpass output to S3.
-aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${bandpass_output}"
-aws s3 cp "$nbar_hdr" "s3://${bucket}/${outputname}/${bandpass_hdr}"
+# outputdir="${workingdir}/output/"
+# mv "${outputdir}${outputname}"
+# # Generate manifest
+# echo "Generating manifest"
+
+# # Copy final bandpass output to S3.
+# aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${bandpass_output}"
+# aws s3 cp "$nbar_hdr" "s3://${bucket}/${outputname}/${bandpass_hdr}"
