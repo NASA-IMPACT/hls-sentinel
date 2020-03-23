@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 """
 Translate Sentinel-2 HLS HDF files to Cloud Optimized GeoTIFF aka COG.
 
