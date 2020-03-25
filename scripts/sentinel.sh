@@ -121,7 +121,7 @@ manifest="${workingdir}/${manifest_name}"
 create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30"
 
 # Copy output to S3.
-aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" --include "*.xml" --include "*.jpg"
+aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" --include "*.xml" --include "*.jpg" --exclude "fmask.bin.aux.xml"
 
 # Copy manifest to S3 to signal completion.
 aws s3 cp "$manifest" "s3://${bucket_key}/${manifest_name}"
