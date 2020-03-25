@@ -26,7 +26,7 @@ set_output_names () {
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
 
-  date=${granulecomponents[2]:0:8}
+  date=${granulecomponents[2]:0:14}
   year=${date:0:4}
   month=${date:4:2}
   day=${date:6:2}
