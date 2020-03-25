@@ -55,14 +55,14 @@ def main(argv):
             normal_bucket = urlparse(bucket).geturl()
             file_item["uri"] = "%s%s" % (normal_bucket, filename)
 
-            if filename.endswith(".hdf"):
+            if filename.endswith(".tif"):
                 file_item["type"] = "data"
                 # Root file name without extension
                 manifest["product"]["name"] = filename[0:len(filename) - 4]
             if filename.endswith(".xml"):
                 file_item["type"] = "metadata"
                 file_item["uri"] = "%sdata/%s" % (normal_bucket, filename)
-            if filename.endswith(".png"):
+            if filename.endswith(".jpg"):
                 file_item["type"] = "browse"
 
             manifest["files"].append(file_item)
