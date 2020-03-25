@@ -53,7 +53,7 @@ def main(argv):
             file_item["checksum-type"] = "MD5"
 
             normal_bucket = urlparse(bucket).geturl()
-            file_item["uri"] = "%s%s" % (normal_bucket, filename)
+            file_item["uri"] = "%s/%s" % (normal_bucket, filename)
 
             if filename.endswith(".tif"):
                 file_item["type"] = "data"
