@@ -111,7 +111,7 @@ parameter="/usr/local/bandpass_parameter.${sensor}.txt"
 L8like "$parameter" "$nbar_input"
 
 mv "$nbar_input" "$output_hdf"
-mv "${nbar_input}.hdr" "${$output_hdf}.hdr"
+mv "${nbar_input}.hdr" "${output_hdf}.hdr"
 
 # Convert to COGs
 echo "Converting to COGs"
