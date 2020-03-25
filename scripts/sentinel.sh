@@ -30,11 +30,12 @@ set_output_names () {
   year=${date:0:4}
   month=${date:4:2}
   day=${date:6:2}
-  day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
   hms=${date:8:6}
   day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
+
   outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
   nbar_input="${workingdir}/${outputname}.hdf"
+  nbar_hdr="${nbar_input}.hdr"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
 }
@@ -111,16 +112,16 @@ L8like "$parameter" "$nbar_input"
 echo "Converting to COGs"
 hdf_to_cog.py "$nbar_input" --output-dir "$workingdir"
 
-bucket_key="s3://${bucket}/${outputname}/" 
+bucket_key="s3://${bucket}/${outputname}/"
 
 # Generate manifest
 echo "Generating manifest"
 manifest_name="${outputname}.json"
-manifest="${workingdir}/${manifest_name}" 
+manifest="${workingdir}/${manifest_name}"
 create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30"
 
 # Copy output to S3.
 aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" --include "*.xml" --include "*.jpg"
 
 # Copy manifest to S3 to signal completion.
-aws s3 cp "$manifest" "s3://${bucket_key}/${manifest_name}"
+aws s4 cp "$manifest" "s3://${bucket_key}/${manifest_name}"
