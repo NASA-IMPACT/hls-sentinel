@@ -10,10 +10,10 @@ inputbucket=$INPUT_BUCKET
 workingdir="/tmp/${jobid}"
 
 # Remove tmp files on exit
-# trap "rm -rf $workingdir; exit" INT TERM EXIT
+trap "rm -rf $workingdir; exit" INT TERM EXIT
 
-# # Create workingdir
-# mkdir -p "$workingdir"
+# Create workingdir
+mkdir -p "$workingdir"
 
 # The derive_s2nbar C code infers values from the input file name so this
 # formatting is necessary.  This implicit name requirement is not documented
@@ -123,4 +123,4 @@ create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30"
 aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" --include "*.xml" --include "*.jpg"
 
 # Copy manifest to S3 to signal completion.
-aws s3 cp "$manifest" "s3://${bucket_key}/${manifest_name}" 
+aws s3 cp "$manifest" "s3://${bucket_key}/${manifest_name}"
