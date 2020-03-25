@@ -26,15 +26,17 @@ set_output_names () {
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
 
-  date=${granulecomponents[2]:0:14}
+  date=${granulecomponents[2]:0:15}
   year=${date:0:4}
   month=${date:4:2}
   day=${date:6:2}
-  hms=${date:8:6}
-  day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
+  hms=${date:8:7}
 
-  outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
-  nbar_input="${workingdir}/${outputname}.hdf"
+  day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
+  outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.v1.5"
+  output_hdf="${workingdir}/${outputname}"
+  nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
+  nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
@@ -108,9 +110,12 @@ echo "Running L8like"
 parameter="/usr/local/bandpass_parameter.${sensor}.txt"
 L8like "$parameter" "$nbar_input"
 
+mv "$nbar_input" "$output_hdf"
+mv "${nbar_input}.hdr" "${$output_hdf}.hdr"
+
 # Convert to COGs
 echo "Converting to COGs"
-hdf_to_cog.py "$nbar_input" --output-dir "$workingdir"
+hdf_to_cog.py "$output_hdf" --output-dir "$workingdir"
 
 bucket_key="s3://${bucket}/${outputname}"
 
