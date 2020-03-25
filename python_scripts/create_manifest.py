@@ -37,7 +37,7 @@ def main(argv):
     manifest["product"] = {}
     manifest["files"] = []
     for filename in os.listdir(inputdir):
-        if filename.endswith(".hdf") or filename.endswith(".xml") or filename.endswith(".xml"):
+        if filename.endswith(".tif") or filename.endswith(".jpg") or filename.endswith(".xml"):
             file_item = {}
             file_item["name"] = filename
             size = os.path.getsize(os.path.join(inputdir, filename))
