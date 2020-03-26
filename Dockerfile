@@ -99,6 +99,8 @@ RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.g
 
 RUN pip install rio-cogeo==1.1.10 --no-binary rasterio --user
 
+RUN pip install git+https://github.com/NASA-IMPACT/hls-thumbnails
+
 COPY ./python_scripts/* ${PREFIX}/bin/
 
 COPY ./scripts/* ${PREFIX}/bin/
