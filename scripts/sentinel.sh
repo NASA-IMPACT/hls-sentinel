@@ -34,10 +34,11 @@ set_output_names () {
 
   day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
   outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.v1.5"
-  output_hdf="${workingdir}/${outputname}"
+  output_hdf="${workingdir}/${outputname}.hdf"
   nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
+  output_thumbnail="${workingdir}/${outputname}.jpg"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
 }
@@ -116,6 +117,10 @@ mv "${nbar_input}.hdr" "${output_hdf}.hdr"
 # Convert to COGs
 echo "Converting to COGs"
 hdf_to_cog.py "$output_hdf" --output-dir "$workingdir"
+
+# Create thumbnail
+echo "Creating thumbnail"
+create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
 
 bucket_key="s3://${bucket}/${outputname}"
 
