@@ -134,7 +134,7 @@ bucket_key="s3://${bucket}/${outputname}"
 echo "Generating manifest"
 manifest_name="${outputname}.json"
 manifest="${workingdir}/${manifest_name}"
-create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30"
+create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30" -p "$outputname"
 
 # Copy output to S3.
 aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml"
