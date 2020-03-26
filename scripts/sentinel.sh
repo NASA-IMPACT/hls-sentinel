@@ -39,7 +39,7 @@ set_output_names () {
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
   output_thumbnail="${workingdir}/${outputname}.jpg"
-  output_metadata="${workingdir}/${outputname}.xml"
+  output_metadata="${workingdir}/${outputname}.cmr.xml"
 
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
