@@ -39,6 +39,8 @@ set_output_names () {
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
   output_thumbnail="${workingdir}/${outputname}.jpg"
+  output_metadata="${workingdir}/${outputname}.xml"
+
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
 }
@@ -121,6 +123,10 @@ hdf_to_cog.py "$output_hdf" --output-dir "$workingdir"
 # Create thumbnail
 echo "Creating thumbnail"
 create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
+
+# Create metadata
+echo "Creating metadata"
+create_metadata "$output_hdf" --save "$output_metadata"
 
 bucket_key="s3://${bucket}/${outputname}"
 
