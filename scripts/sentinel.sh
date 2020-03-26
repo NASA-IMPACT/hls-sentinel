@@ -15,36 +15,31 @@ trap "rm -rf $workingdir; exit" INT TERM EXIT
 # Create workingdir
 mkdir -p "$workingdir"
 
-set_outputname () {
-  # Use the base SAFE name without the unique id for the output file name.
-	IFS='_'
-	read -ra granulecomponents <<< "$1"
-  outputname="${granulecomponents[0]}_${granulecomponents[1]}_${granulecomponents[2]}_${granulecomponents[3]}_${granulecomponents[4]}_${granulecomponents[5]}"
-}
-
 # The derive_s2nbar C code infers values from the input file name so this
 # formatting is necessary.  This implicit name requirement is not documented
 # anywhere!
-set_nbar_input () {
+
+# The required format for nbar is read in sections from left to right
+# HLS.S30.${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdr
+set_output_names () {
+  # Use the base SAFE name without the unique id for the output file name.
 	IFS='_'
 	read -ra granulecomponents <<< "$1"
-  # The required format is
-  # HLS.S30.${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdr
-  date=${granulecomponents[2]:0:8}
+
+  date=${granulecomponents[2]:0:15}
   year=${date:0:4}
   month=${date:4:2}
   day=${date:6:2}
+  hms=${date:8:7}
+
   day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
-  nbar_name=HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${granulecomponents[6]}.nbar.v1.5
+  outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.v1.5"
+  output_hdf="${workingdir}/${outputname}"
+  nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
-}
-
-set_bandpass_output_name () {
-	IFS='_'
-	read -ra granulecomponents <<< "$1"
-  bandpass_output="HLS.S30.${granulecomponents[5]}.${granulecomponents[2]:0:8}.${granulecomponents[6]}.v1.5.hdf"
-  bandpass_hdr="${bandpass_output}.hdr"
+  # We also need to obtain the sensor for the Bandpass parameters file
+  sensor="${granulecomponents[0]:0:3}"
 }
 
 echo "Start processing granules"
@@ -54,9 +49,7 @@ read -r -a granules <<< "$granulelist"
 # Consolidate twin granules if necessary.
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
-  set_outputname "${granules[0]}"
-  set_nbar_input "${granules[0]}"
-  set_bandpass_output_name "${granules[0]}"
+  set_output_names "${granules[0]}"
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
@@ -75,8 +68,8 @@ if [ "${#granules[@]}" = 2 ]; then
     fi
   done
   echo "Running consolidate on ${consolidatelist}"
-  consolidate_output="${workingdir}/${outputname}_consolidate.hdf"
-  consolidate_angle_output="${workingdir}/${outputname}_consolidate_angle.hdf"
+  consolidate_output="${workingdir}/consolidate.hdf"
+  consolidate_angle_output="${workingdir}/consolidate_angle.hdf"
   consolidate_command="consolidate ${consolidatelist} ${consolidate_output}"
   consolidate_angle_command="consolidate_s2ang ${consolidate_angle_list} ${consolidate_angle_output}"
   eval "$consolidate_command"
@@ -87,9 +80,7 @@ if [ "${#granules[@]}" = 2 ]; then
 else
   # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
-  set_outputname "$granule"
-  set_nbar_input "$granule"
-  set_bandpass_output_name "$granule"
+  set_output_names "$granule"
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
@@ -100,7 +91,7 @@ fi
 
 # Resample to 30m
 echo "Running create_s2at30m"
-resample30m="${workingdir}/${outputname}_resample30m.hdf"
+resample30m="${workingdir}/resample30m.hdf"
 resample30m_hdr="${resample30m}.hdr"
 create_s2at30m "$granuleoutput" "$resample30m"
 
@@ -116,10 +107,26 @@ derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
 
 # Bandpass
 echo "Running L8like"
-sensor="${outputname:0:3}"
 parameter="/usr/local/bandpass_parameter.${sensor}.txt"
 L8like "$parameter" "$nbar_input"
 
-# Copy final bandpass output to S3.
-aws s3 cp "$nbar_input" "s3://${bucket}/${outputname}/${bandpass_output}"
-aws s3 cp "$nbar_hdr" "s3://${bucket}/${outputname}/${bandpass_hdr}"
+mv "$nbar_input" "$output_hdf"
+mv "${nbar_input}.hdr" "${output_hdf}.hdr"
+
+# Convert to COGs
+echo "Converting to COGs"
+hdf_to_cog.py "$output_hdf" --output-dir "$workingdir"
+
+bucket_key="s3://${bucket}/${outputname}"
+
+# Generate manifest
+echo "Generating manifest"
+manifest_name="${outputname}.json"
+manifest="${workingdir}/${manifest_name}"
+create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30"
+
+# Copy output to S3.
+aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml"
+
+# Copy manifest to S3 to signal completion.
+aws s3 cp "$manifest" "${bucket_key}/${manifest_name}"
