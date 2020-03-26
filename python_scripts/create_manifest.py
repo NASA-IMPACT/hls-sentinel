@@ -62,7 +62,6 @@ def main(argv):
                 file_item["type"] = "data"
             if filename.endswith(".xml"):
                 file_item["type"] = "metadata"
-                file_item["uri"] = "%sdata/%s" % (normal_bucket, filename)
             if filename.endswith(".jpg"):
                 file_item["type"] = "browse"
 
