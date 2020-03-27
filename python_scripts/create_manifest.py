@@ -12,15 +12,16 @@ def main(argv):
     outputfile = ''
     bucket = ''
     collection = ''
+    product = ''
     manifest = {}
     try:
-        opts, args = getopt.getopt(argv,"i:o:b:c:h",["inputdir=","outputfile=","bucket=","collection="])
+        opts, args = getopt.getopt(argv,"i:o:b:c:p:h",["inputdir=","outputfile=","bucket=","collection=","product",])
     except getopt.GetoptError:
-        print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection>'
+        print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection>'
+            print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product>'
             sys.exit()
         elif opt in ("-i", "--inputdir"):
             inputdir = arg
@@ -30,11 +31,13 @@ def main(argv):
             bucket = arg
         elif opt in ("-c", "--collection"):
             collection = arg
+        elif opt in ("-p", "--product"):
+            product = arg
 
     manifest["collection"] = collection
     manifest["id"] = str(uuid.uuid4())
     manifest["version"] = "1.5"
-    manifest["product"] = {}
+    manifest["product"] = {"name": product}
     manifest["files"] = []
     for filename in os.listdir(inputdir):
         if filename.endswith(".tif") or filename.endswith(".jpg") or filename.endswith(".xml"):
@@ -57,11 +60,8 @@ def main(argv):
 
             if filename.endswith(".tif"):
                 file_item["type"] = "data"
-                # Root file name without extension
-                manifest["product"]["name"] = filename[0:len(filename) - 4]
             if filename.endswith(".xml"):
                 file_item["type"] = "metadata"
-                file_item["uri"] = "%sdata/%s" % (normal_bucket, filename)
             if filename.endswith(".jpg"):
                 file_item["type"] = "browse"
 
