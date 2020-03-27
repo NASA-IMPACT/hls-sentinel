@@ -35,10 +35,9 @@ def main(argv):
             product = arg
 
     manifest["collection"] = collection
-    manifest["id"] = str(uuid.uuid4())
+    manifest["identifier"] = str(uuid.uuid4())
     manifest["version"] = "1.5"
-    manifest["product"] = {"name": product}
-    manifest["files"] = []
+    files = []
     for filename in os.listdir(inputdir):
         if filename.endswith(".tif") or filename.endswith(".jpg") or filename.endswith(".xml"):
             file_item = {}
@@ -69,6 +68,8 @@ def main(argv):
             continue
         else:
             continue
+    
+    manifest["product"] = {"name": product, "files": files}
     with open(outputfile, 'w') as out:
         json.dump(manifest, out)
 
