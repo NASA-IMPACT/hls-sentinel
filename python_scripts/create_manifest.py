@@ -35,10 +35,9 @@ def main(argv):
             product = arg
 
     manifest["collection"] = collection
-    manifest["id"] = str(uuid.uuid4())
+    manifest["identifier"] = str(uuid.uuid4())
     manifest["version"] = "1.5"
-    manifest["product"] = {"name": product}
-    manifest["files"] = []
+    files = []
     for filename in os.listdir(inputdir):
         if filename.endswith(".tif") or filename.endswith(".jpg") or filename.endswith(".xml"):
             file_item = {}
@@ -53,7 +52,7 @@ def main(argv):
                         break
                     file_hash.update(chunk)
             file_item["checksum"] = file_hash.hexdigest()
-            file_item["checksum-type"] = "MD5"
+            file_item["checksumType"] = "MD5"
 
             normal_bucket = urlparse(bucket).geturl()
             file_item["uri"] = "%s/%s" % (normal_bucket, filename)
@@ -69,6 +68,8 @@ def main(argv):
             continue
         else:
             continue
+    
+    manifest["product"] = {"name": product, "files": files}
     with open(outputfile, 'w') as out:
         json.dump(manifest, out)
 
