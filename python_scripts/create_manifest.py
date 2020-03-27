@@ -53,7 +53,7 @@ def main(argv):
                         break
                     file_hash.update(chunk)
             file_item["checksum"] = file_hash.hexdigest()
-            file_item["checksum-type"] = "MD5"
+            file_item["checksumType"] = "MD5"
 
             normal_bucket = urlparse(bucket).geturl()
             file_item["uri"] = "%s/%s" % (normal_bucket, filename)
