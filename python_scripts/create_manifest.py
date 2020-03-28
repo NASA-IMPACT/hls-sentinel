@@ -64,11 +64,11 @@ def main(argv):
             if filename.endswith(".jpg"):
                 file_item["type"] = "browse"
 
-            manifest["files"].append(file_item)
+            files.append(file_item)
             continue
         else:
             continue
-    
+
     manifest["product"] = {"name": product, "files": files}
     with open(outputfile, 'w') as out:
         json.dump(manifest, out)
