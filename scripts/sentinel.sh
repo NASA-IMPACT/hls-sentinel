@@ -8,7 +8,7 @@ granulelist="$GRANULE_LIST"
 bucket=$OUTPUT_BUCKET
 inputbucket=$INPUT_BUCKET
 workingdir="/tmp/${jobid}"
-
+bucket_role_arn=$GCC_ROLE_ARN
 # Remove tmp files on exit
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
@@ -23,8 +23,8 @@ mkdir -p "$workingdir"
 # HLS.S30.${tileid}.${year}${doy}.${obs}.nbar.${HLSVER}.hdr
 set_output_names () {
   # Use the base SAFE name without the unique id for the output file name.
-	IFS='_'
-	read -ra granulecomponents <<< "$1"
+  IFS='_'
+  read -ra granulecomponents <<< "$1"
 
   date=${granulecomponents[2]:0:15}
   year=${date:0:4}
@@ -128,7 +128,7 @@ create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
 echo "Creating metadata"
 create_metadata "$output_hdf" --save "$output_metadata"
 
-bucket_key="s3://${bucket}/${outputname}"
+bucket_key="s3://${bucket}/S30/data/${outputname}"
 
 # Generate manifest
 echo "Generating manifest"
@@ -137,7 +137,17 @@ manifest="${workingdir}/${manifest_name}"
 create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30" -p "$outputname"
 
 # Copy output to S3.
-aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml"
+mkdir -p ~/.aws
+echo "[profile gccprofile]" > ~/.aws/config
+echo "region=us-east-1" >> ~/.aws/config
+echo "output=text" >> ~/.aws/config
+
+echo "[gccprofile]" > ~/.aws/credentials
+echo "role_arn = ${GCC_ROLE_ARN}" >> ~/.aws/credentials
+echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
+
+aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
+  --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" --profile gccprofile
 
 # Copy manifest to S3 to signal completion.
-aws s3 cp "$manifest" "${bucket_key}/${manifest_name}"
+aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
