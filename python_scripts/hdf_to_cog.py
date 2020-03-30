@@ -32,6 +32,7 @@ import click
 
 import rasterio
 from rasterio.rio import options
+from rasterio.io import MemoryFile
 from rio_cogeo.cogeo import cog_translate, cog_validate
 from rio_cogeo.profiles import cog_profiles
 
@@ -105,16 +106,46 @@ def main(input, output_dir, cogeo_profile, blocksize, creation_options):
             fname = "{}.{}.tif".format(bname, band)
             output_name = os.path.join(output_dir, fname)
 
-            with rasterio.open(sds) as sub_dst:
-                cog_translate(
-                    sub_dst,
-                    output_name,
-                    output_profile,
-                    config=config,
-                    forward_band_tags=True,
-                    overview_resampling="nearest",
-                    quiet=True,
-                )
+            # Fix invalid nodata value for B10
+            if band in ["B10"]:
+                with rasterio.open(sds) as sub_dst:
+                    data = sub_dst.read()
+                    data[data == 0] = sub_dst.nodata
+                    profile = sub_dst.profile.copy()
+                    profile.update(
+                        dict(
+                            driver="GTiff",
+                            tiled=True,
+                            blockxsize=256,
+                            blockysize=256,
+                        )
+                    )
+
+                    with MemoryFile() as memfile:
+                        with memfile.open(**profile) as mem:
+                            mem.write(data)
+                            del data
+                            cog_translate(
+                                mem,
+                                output_name,
+                                output_profile,
+                                config=config,
+                                forward_band_tags=True,
+                                overview_resampling="nearest",
+                                quiet=True,
+                            )
+
+            else:
+                with rasterio.open(sds) as sub_dst:
+                    cog_translate(
+                        sub_dst,
+                        output_name,
+                        output_profile,
+                        config=config,
+                        forward_band_tags=True,
+                        overview_resampling="nearest",
+                        quiet=True,
+                    )
 
             assert cog_validate(output_name)
 
