@@ -5,10 +5,12 @@ set -o errexit
 
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
-bucket=$OUTPUT_BUCKET
-inputbucket=$INPUT_BUCKET
+bucket="$OUTPUT_BUCKET"
+inputbucket="$INPUT_BUCKET"
 workingdir="/tmp/${jobid}"
-bucket_role_arn=$GCC_ROLE_ARN
+bucket_role_arn="$GCC_ROLE_ARN"
+debug_bucket="$DEBUG_BUCKET"
+
 # Remove tmp files on exit
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
@@ -151,3 +153,9 @@ aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
 
 # Copy manifest to S3 to signal completion.
 aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
+
+# Copy all intermediate files to debug bucket.
+if [[! -z "$debug_bucket" ]]; then
+  debug_bucket_key=s3://${debug_bucket}/${outputname}
+  aws s3 sync "$workingdir" "$debug_bucket_key" 
+fi
