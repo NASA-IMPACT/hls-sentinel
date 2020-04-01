@@ -127,8 +127,8 @@ echo "Creating thumbnail"
 create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
 
 # Create metadata
-echo "Creating metadata"
-create_metadata "$output_hdf" --save "$output_metadata"
+# echo "Creating metadata"
+# create_metadata "$output_hdf" --save "$output_metadata"
 
 bucket_key="s3://${bucket}/S30/data/${outputname}"
 
@@ -148,14 +148,15 @@ echo "[gccprofile]" > ~/.aws/credentials
 echo "role_arn = ${GCC_ROLE_ARN}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
-aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
-  --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" --profile gccprofile
 
-# Copy manifest to S3 to signal completion.
-aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
+if [ -z "$debug_bucket" ]; then
+  aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
+    --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" --profile gccprofile
 
-# Copy all intermediate files to debug bucket.
-if [[! -z "$debug_bucket" ]]; then
+  # Copy manifest to S3 to signal completion.
+  aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
+else
+  # Copy all intermediate files to debug bucket.
   debug_bucket_key=s3://${debug_bucket}/${outputname}
-  aws s3 sync "$workingdir" "$debug_bucket_key" 
+  aws s3 sync "$workingdir" "$debug_bucket_key"
 fi
