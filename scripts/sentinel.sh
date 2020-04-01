@@ -5,10 +5,12 @@ set -o errexit
 
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
-bucket=$OUTPUT_BUCKET
-inputbucket=$INPUT_BUCKET
+bucket="$OUTPUT_BUCKET"
+inputbucket="$INPUT_BUCKET"
 workingdir="/tmp/${jobid}"
-bucket_role_arn=$GCC_ROLE_ARN
+bucket_role_arn="$GCC_ROLE_ARN"
+debug_bucket="$DEBUG_BUCKET"
+
 # Remove tmp files on exit
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
@@ -146,8 +148,15 @@ echo "[gccprofile]" > ~/.aws/credentials
 echo "role_arn = ${GCC_ROLE_ARN}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
-aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
-  --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" --profile gccprofile
 
-# Copy manifest to S3 to signal completion.
-aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
+if [ -z "$debug_bucket" ]; then
+  aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
+    --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" --profile gccprofile
+
+  # Copy manifest to S3 to signal completion.
+  aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
+else
+  # Copy all intermediate files to debug bucket.
+  debug_bucket_key=s3://${debug_bucket}/${outputname}
+  aws s3 sync "$workingdir" "$debug_bucket_key"
+fi
