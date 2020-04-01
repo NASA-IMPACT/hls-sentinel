@@ -127,8 +127,8 @@ echo "Creating thumbnail"
 create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
 
 # Create metadata
-# echo "Creating metadata"
-# create_metadata "$output_hdf" --save "$output_metadata"
+echo "Creating metadata"
+create_metadata "$output_hdf" --save "$output_metadata"
 
 bucket_key="s3://${bucket}/S30/data/${outputname}"
 
