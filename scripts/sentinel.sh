@@ -136,7 +136,8 @@ bucket_key="s3://${bucket}/S30/data/${outputname}"
 echo "Generating manifest"
 manifest_name="${outputname}.json"
 manifest="${workingdir}/${manifest_name}"
-create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30" -p "$outputname"
+create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" \ 
+  -c "HLSS30" -p "$outputname" -j "$jobid"
 
 # Copy output to S3.
 mkdir -p ~/.aws
