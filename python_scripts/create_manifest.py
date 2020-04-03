@@ -2,7 +2,6 @@
 import sys, getopt
 import os
 import shutil
-import uuid
 import json
 import hashlib
 from urlparse import urlparse
@@ -13,15 +12,16 @@ def main(argv):
     bucket = ''
     collection = ''
     product = ''
+    jobid = ''
     manifest = {}
     try:
-        opts, args = getopt.getopt(argv,"i:o:b:c:p:h",["inputdir=","outputfile=","bucket=","collection=","product",])
+        opts, args = getopt.getopt(argv,"i:o:b:c:p:j:h",["inputdir=","outputfile=","bucket=","collection=","product","jobid",])
     except getopt.GetoptError:
-        print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product>'
+        print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product> -j <jobid>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product>'
+            print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product> -j <jobid>'
             sys.exit()
         elif opt in ("-i", "--inputdir"):
             inputdir = arg
@@ -33,9 +33,11 @@ def main(argv):
             collection = arg
         elif opt in ("-p", "--product"):
             product = arg
+        elif opt in ("-j", "--jobid"):
+            jobid = arg
 
     manifest["collection"] = collection
-    manifest["identifier"] = str(uuid.uuid4())
+    manifest["identifier"] = jobid
     manifest["version"] = "1.5"
     files = []
     for filename in os.listdir(inputdir):

@@ -10,6 +10,7 @@ inputbucket="$INPUT_BUCKET"
 workingdir="/tmp/${jobid}"
 bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
+replace_existing="$REPLACE_EXISTING"
 
 # Remove tmp files on exit
 trap "rm -rf $workingdir; exit" INT TERM EXIT
@@ -42,9 +43,21 @@ set_output_names () {
   nbar_hdr="${nbar_input}.hdr"
   output_thumbnail="${workingdir}/${outputname}.jpg"
   output_metadata="${workingdir}/${outputname}.cmr.xml"
+  bucket_key="s3://${bucket}/S30/data/${outputname}"
 
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
+}
+
+exit_if_exists () {
+  if [ ! -z "$replace_existing" ]; then
+    # Check if output folder key exists
+    exists=$(aws s3 ls "${bucket_key}/" | wc -l)
+    if [ ! "$exists" = 0 ]; then
+      echo "Output product already exists.  Not replacing"
+      exit 4
+    fi
+  fi
 }
 
 echo "Start processing granules"
@@ -55,6 +68,7 @@ read -r -a granules <<< "$granulelist"
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
   set_output_names "${granules[0]}"
+  # Twin granules should always overwrite existing single granule output.
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
@@ -86,6 +100,7 @@ else
   # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
   set_output_names "$granule"
+  exit_if_exists
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
@@ -130,13 +145,11 @@ create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
 echo "Creating metadata"
 create_metadata "$output_hdf" --save "$output_metadata"
 
-bucket_key="s3://${bucket}/S30/data/${outputname}"
-
 # Generate manifest
 echo "Generating manifest"
 manifest_name="${outputname}.json"
 manifest="${workingdir}/${manifest_name}"
-create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30" -p "$outputname"
+create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30" -p "$outputname" -j "$jobid"
 
 # Copy output to S3.
 mkdir -p ~/.aws
@@ -148,15 +161,15 @@ echo "[gccprofile]" > ~/.aws/credentials
 echo "role_arn = ${GCC_ROLE_ARN}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
-
 if [ -z "$debug_bucket" ]; then
-  aws s3 sync "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
-    --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" --profile gccprofile
+  aws s3 cp "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
+    --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" \
+    --profile gccprofile --recursive
 
   # Copy manifest to S3 to signal completion.
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
 else
   # Copy all intermediate files to debug bucket.
   debug_bucket_key=s3://${debug_bucket}/${outputname}
-  aws s3 sync "$workingdir" "$debug_bucket_key"
+  aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
 fi
