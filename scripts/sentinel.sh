@@ -54,6 +54,7 @@ exit_if_exists () {
     # Check if output folder key exists
     exists=$(aws s3 ls "${bucket_key}/" | wc -l)
     if [ ! "$exists" = 0 ]; then
+      echo "Output product already exists.  Not replacing"
       exit 4
     fi
   fi
@@ -143,7 +144,6 @@ create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
 # Create metadata
 echo "Creating metadata"
 create_metadata "$output_hdf" --save "$output_metadata"
-
 
 # Generate manifest
 echo "Generating manifest"
