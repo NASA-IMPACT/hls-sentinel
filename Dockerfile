@@ -92,6 +92,15 @@ RUN cd ${SRC_DIR}/L8like \
     && cd $SRC_DIR \
     && rm -rf L8like
 
+# Move and compile s2trim
+COPY ./hls_libs/trim ${SRC_DIR}/trim
+RUN cd ${SRC_DIR}/trim \
+    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make clean \
+    && make install \
+    && cd $SRC_DIR \
+    && rm -rf trim
+
 COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S2A.txt
 COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
 

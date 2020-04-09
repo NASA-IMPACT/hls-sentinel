@@ -99,10 +99,16 @@ convert_espa_to_hdf --xml="$hls_espa_one_xml" --hdf="$sr_hdf_one"
 convert_espa_to_hdf --xml="$hls_espa_two_xml" --hdf="$sr_hdf_two"
 
 # Combine split hdf files and resample 10M SR bands back to 20M and 60M.
+echo "Combining hdf files"
 twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_combined_hdf"
 
 # Run addFmaskSDS
+echo "Adding Fmask SDS"
 addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
+
+# Trim edge pixels for spurious SR values
+echo "Trimming output hdf file"
+s2trim "$hls_sr_output_hdf"
 
 # Remove intermediate files.
 cd "$granuledir"
