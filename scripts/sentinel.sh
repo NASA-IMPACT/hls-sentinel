@@ -28,7 +28,11 @@ set_output_names () {
   # Use the base SAFE name without the unique id for the output file name.
   IFS='_'
   read -ra granulecomponents <<< "$1"
-
+  # Include twin in bucket key for s3 when argument is included.
+  twinkey=""
+  if [ ! -z "$2" ]; then
+    twinkey="/twin"
+  fi
   date=${granulecomponents[2]:0:15}
   year=${date:0:4}
   month=${date:4:2}
@@ -43,7 +47,7 @@ set_output_names () {
   nbar_hdr="${nbar_input}.hdr"
   output_thumbnail="${workingdir}/${outputname}.jpg"
   output_metadata="${workingdir}/${outputname}.cmr.xml"
-  bucket_key="s3://${bucket}/S30/data/${outputname}"
+  bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
 
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
@@ -67,8 +71,7 @@ read -r -a granules <<< "$granulelist"
 # Consolidate twin granules if necessary.
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
-  set_output_names "${granules[0]}"
-  # Twin granules should always overwrite existing single granule output.
+  set_output_names "${granules[0]}" twin
   # Process each granule in granulelist and build the consolidatelist
   consolidatelist=""
   consolidate_angle_list=""
