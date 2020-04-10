@@ -24,7 +24,7 @@ mkdir -p "$granuledir"
 
 # Download granule from s3
 aws s3 cp "$inputgranule" "$safezip"
-unzip "$safezip" -d "$granuledir"
+unzip "$safezip" -d "$granuledir" -q
 
 # Get GRANULE sub directory
 grandir_id=$(get_s2_granule_dir.py -i "${safedirectory}")
