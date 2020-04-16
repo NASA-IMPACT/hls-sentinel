@@ -1,4 +1,5 @@
 #/bin/bash
+export OMP_NUM_THREADS=2
 
 # Exit on any error
 set -o errexit
@@ -7,7 +8,7 @@ jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
 bucket="$OUTPUT_BUCKET"
 inputbucket="$INPUT_BUCKET"
-workingdir="/tmp/${jobid}"
+workingdir="/var/scratch/${jobid}"
 bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
 replace_existing="$REPLACE_EXISTING"
@@ -17,7 +18,6 @@ trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
 mkdir -p "$workingdir"
-
 # The derive_s2nbar C code infers values from the input file name so this
 # formatting is necessary.  This implicit name requirement is not documented
 # anywhere!
