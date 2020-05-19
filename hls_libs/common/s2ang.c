@@ -3,9 +3,9 @@
 #include "math.h"
 
 /* open S2 angles for read or create*/
-int open_s2ang(s2ang_t *s2ang, intn access_mode)
+int open_s2ang(s2ang_t *s2ang, intn access_mode) 
 {
-	char sdsname[500];
+	char sdsname[500];     
 	int32 sds_index;
 	int32 sd_id, sds_id;
 	int32 nattr, attr_index, count;
@@ -26,7 +26,7 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 	s2ang->access_mode = access_mode;
 
 	/* For DFACC_READ, find the image dimension from band 1.
-	 * For DFACC_CREATE, image dimension is given.
+	 * For DFACC_CREATE, image dimension is given. 
 	 */
 	if (s2ang->access_mode == DFACC_READ) {
 		if ((s2ang->sd_id = SDstart(s2ang->fname, s2ang->access_mode)) == FAIL) {
@@ -93,7 +93,7 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 				return(ERR_READ);
 			}
 			s2ang->sds_id_vz[ib] = SDselect(s2ang->sd_id, sds_index);
-
+	
 			if ((s2ang->vz[ib] = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
 				Error("Cannot allocate memory");
 				exit(1);
@@ -113,7 +113,7 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 				return(ERR_READ);
 			}
 			s2ang->sds_id_va[ib] = SDselect(s2ang->sd_id, sds_index);
-
+	
 			if ((s2ang->va[ib] = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
 				Error("Cannot allocate memory");
 				exit(1);
@@ -174,14 +174,14 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 			sprintf(message, "Cannot create SDS %s", sdsname);
 			Error(message);
 			return(ERR_CREATE);
-		}
+		}    
 		for (irow = 0; irow < s2ang->nrow; irow++) {
-			for (icol = 0; icol < s2ang->ncol; icol++)
+			for (icol = 0; icol < s2ang->ncol; icol++) 
 				s2ang->sz[irow * s2ang->ncol + icol] = ANGFILL;
 		}
 		PutSDSDimInfo(s2ang->sds_id_sz, dimnames[0], 0);
 		PutSDSDimInfo(s2ang->sds_id_sz, dimnames[1], 1);
-		SDsetcompress(s2ang->sds_id_sz, comp_type, &c_info);
+		SDsetcompress(s2ang->sds_id_sz, comp_type, &c_info);	
 
 		/* SA */
 		strcpy(sdsname, SA);
@@ -196,14 +196,14 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 			sprintf(message, "Cannot create SDS %s", sdsname);
 			Error(message);
 			return(ERR_CREATE);
-		}
+		}    
 		for (irow = 0; irow < s2ang->nrow; irow++) {
-			for (icol = 0; icol < s2ang->ncol; icol++)
+			for (icol = 0; icol < s2ang->ncol; icol++) 
 				s2ang->sa[irow * s2ang->ncol + icol] = ANGFILL;
 		}
 		PutSDSDimInfo(s2ang->sds_id_sa, dimnames[0], 0);
 		PutSDSDimInfo(s2ang->sds_id_sa, dimnames[1], 1);
-		SDsetcompress(s2ang->sds_id_sa, comp_type, &c_info);
+		SDsetcompress(s2ang->sds_id_sa, comp_type, &c_info);	
 
 
 		/* View angles for each band */
@@ -212,7 +212,7 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 			sprintf(sdsname, "%s_%s", S2_SDS_NAME[ib], VZ);
 			dimsizes[0] = s2ang->nrow;
 			dimsizes[1] = s2ang->ncol;
-
+	
 			if ((s2ang->vz[ib] = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
 				Error("Cannot allocate memory");
 				exit(1);
@@ -337,6 +337,7 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 					s2ang->sz[k] = val * 100;
 				}
 			}
+
 
 			/* interp */
 			ret = interp_s2ang_bilinear(s2ang->sz, s2ang->nrow, s2ang->ncol);
@@ -573,15 +574,15 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 }
 
 /* Bilinear interpolation from the 5km angle grid, which can be solar zenith or azimuth, 
- * or view zenig or azimuth for a single detector. When it is the angle for a single 
+ * or view zenith or azimuth for a single detector. When it is the angle for a single 
  * detector, the 5km values are interpolated (extrapolated) to the whole image for 
  * easiler implementation. This will not create any problem since only the values within 
  * a detector's footprint will be used later.
  */
 int interp_s2ang_bilinear(uint16 *ang, int nrow, int ncol)
 {
-	/* The row/col number that have the 5km angle values */
 	int rcgrid[N5KM];	/* row/col of ANGPIXSZ meters that contain the 5km values */
+	char valid5km[N5KM]; 	/* A mask of valid 5km data points for a row*/
 	int lftcol, rgtcol;	
 	int toprow, botrow;
 
@@ -592,178 +593,203 @@ int interp_s2ang_bilinear(uint16 *ang, int nrow, int ncol)
 	    col5km_start, col5km_end;
 	int lftcol5km, rgtcol5km, toprow5km, botrow5km;
 	int tmprow, tmpcol;
-	int search_start;	/* an index */
 	uint16 anglft, angrgt, angtop, angbot;
 	double angint;		/* interpolated angle */
 	char message[MSGLEN];
 
-	/* Compute the row/col locations of ANGPIXSZ pixels where the original 5km angle is available. 
-	 * Not a regularly spaced grid because when the 5km values are saved at fine resolution, the 
-	 * spacing between values can be +/- one fine-reso pixel. Additionally, the spacing between the
-	 * the last two fine-reso rows or cols which hold the 5km values is smaller.
-	 * Originally an output pixel size 10m was chose and then every 500 pixels there was an 5km 
-	 * original input. But now ANGPIXSZ (30m) is used to reduce the data volume, and the grid 
-	 * becomes slightly irregular. So use an array "rcgrid" to save where 5km values are saved.
+	/* Compute the row and col locations of fine-resolution ANGPIXSZ pixels where the original 5km 
+         * angle is available.  Not a regularly spaced grid because when the 5km values are saved at 
+         * fine resolution, the spacing between values can be +/- one fine-reso pixel due to rounding. 
+         * Additionally, the spacing between the the last two fine-reso rows or cols which hold the 
+         * 5km values is smaller (because 23 point * 5km > 109800 meters).  
+	 *
+	 * This code snippet also appears in the calling function.  
+	 * This array could have been passed in.  Too late to change, Nov 26, 2019. 
 	 */
-	/* This code snippet also appears in the calling function */
 	for (i = 0; i < N5KM; i++) {
 		rcgrid[i] = floor(i * 5000.0/ANGPIXSZ);
-		if (rcgrid[i] > nrow-1)	/* or ncol-1, square tile */
+		if (rcgrid[i] > nrow-1)	/* or ncol-1. Square tile */
 			rcgrid[i] = nrow-1;
 	}
-	
-	/* First pass: linear interp for the pixels on the rows which hold the 5km data. 
+
+	/* First pass: linear interp on the rows where 5km data are available.
 	 * Note that only N5KM rows have the 5km data.
 	 */
 	for (irow5km = 0; irow5km < N5KM; irow5km++) {
-		irow = rcgrid[irow5km];	/* This row may have the 5km data (Fill or not) */
+
+		/* Set the mask of valid 5km data for this row; later interpolate/extrapolation for a row
+                 * only use data from these points, but not from interpolated or extrapolated ones.
+ 		 */
+		irow = rcgrid[irow5km];		/* This fine-resolution row may have the 5km data (Fill or not) */
+		for (icol5km = 0; icol5km < N5KM; icol5km++) {
+			icol = rcgrid[icol5km];	/* This fine-resol col may have the 5km data (Fill or not) */
+			if (ang[irow * ncol + icol] == ANGFILL)
+				valid5km[icol5km] = 0;
+			else
+				valid5km[icol5km] = 1;
+		}
+
+
+		/* The first and last column in the 5km grid that hold valid data for this row.
+ 		 * There can be holes between valid data points; for example: In
+ 		 * S2A_MSIL1C_20190727T213051_N0208_R086_T17XMK_20190728T010507.SAFE
+ 		 * Band 01 view zenith:
+ 		 * <Viewing_Incidence_Angles_Grids bandId="0" detectorId="8">
+        	 * <Zenith>
+          	 *<COL_STEP unit="m">5000</COL_STEP>
+          	 *<ROW_STEP unit="m">5000</ROW_STEP>
+          	 *<Values_List>
+            	 *<VALUES>3.16347 3.19559 3.2289 3.26041 NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN 3.80201 3.83812 3.87265 3.90644</VALUES>
+            	 * <VALUES>3.49812 3.53211 3.56407 3.59715 3.63095 3.66483 3.70045 3.73548 3.77001 3.80429 3.84005 3.8748 3.90944 3.94418 3.98009 4.0149 4.05163 4.08518 4.11796 4.15563 4.19345 4.22708 4.26125</VALUES>
+ 		 *
+ 		 * Nov 26, 2019.
+ 		 *
+ 		 * In v1.4 the mask valid5km was not used; using col5km_start and col5km_end alone made mistakes for the above case.
+ 		 */
 		col5km_start = -1;
 		col5km_end = -1;
-		for (icol5km = 0; icol5km < N5KM; icol5km++) {	 /* Find the range of columns which have the 5km data */
-			icol = rcgrid[icol5km];
-			k = irow * ncol + icol; 
-			if (ang[k] != ANGFILL && col5km_start == -1) 
+		for (icol5km = 0; icol5km < N5KM; icol5km++) {	 
+			if (valid5km[icol5km] == 1 && col5km_start == -1) 
 				col5km_start = icol5km;
-			if (ang[k] != ANGFILL) 
+
+			if (valid5km[icol5km] == 1)
 				col5km_end = icol5km;
 		}
 
+		/* No valid 5km data on this row. Done with row */ 
 		if (col5km_start == -1) {
-			// Not an error. This is possible when a detector's footprint does not extend
-			// from the very top to the very bottom, but on the upper-left or 
-			// lower-right corner of the tile.  
+			// Not an error.  This is possible when a detector's footprint does not extend
+			// from the very top to the very bottom of the tile, but on the upper-left or 
+			// lower-right corner of the tile. Then for some rows there are no valid angle
+			// data at all.  
 			continue;
 		}
-		else if (col5km_start == col5km_end ) {
-			/* If there is only one 5km value on this line, just use this for every pixel. */
-			k = irow * ncol + rcgrid[col5km_start];
-			for (icol = 0; icol < ncol; icol++) {
-				ang[irow * ncol + icol] = ang[k];
+
+		for (icol = 0; icol < ncol; icol++) {
+			/* For each fine-reso pixel on a row, find its two nearest
+ 			 * neighbors that hold valid 5km data. For the ideal case, the two neighbors
+ 			 * enclose the fine-reso pixel spatially, but sometimes they don't and 
+ 			 * extrapolation is applied.
+ 			 * Remember: there can be 5km-holes between valid 5km-points.
+			 */
+			lftcol5km = -1;
+			rgtcol5km = -1;
+
+			/* The left 5km point */
+			for (icol5km = col5km_end; icol5km >= col5km_start; icol5km--) {
+				if (icol >= rcgrid[icol5km] && valid5km[icol5km] == 1) {
+					lftcol5km = icol5km;
+					break;
+				}
 			}
-		}
-		else {
-			search_start = 0;
-			for (icol = 0; icol < ncol; icol++) {
-				/* For each fine-reso pixel on a row holding the 5km values, find its two 
-				 * nearest neighbors where the 5km values are potentially available. 
-				 * The neighbors can have fill value though.
-				 */
-				for (icol5km = search_start; icol5km < N5KM-1; icol5km++) {
-					if (icol >= rcgrid[icol5km] && icol <= rcgrid[icol5km+1]) {
-						lftcol5km = icol5km;
-						rgtcol5km = icol5km+1;
-					}
-				}
-	
-				/* If both neighbors are non-fill, it is interpolation. If either neighbor has fill 
-				 * value, move along the row to find two nearest non-fill neighbors 
-				 * and then interp becomes extrap.
-				 * Bug fix: test whether a neighbor is within col5km_start and col5km_end, rather than
-				 *          whether a neighbor has fill value because as the extrapolation goes on,
-				 * 	    the originally fillvalue becomes nonfill!   Sep 4, 2016.
-				 *
-				 * Note: As the target location moves away from [col5km_start, col5km_start+1], the
-			 	 * extrapolation can become wild -- extrapolated values can be nagative or extremely high, or
-				 * coincidentally be the fill value. But this does pose a problem because later
-				 * the detector's footprint is used to cookie-cut the angle values. As a result, the 
-				 * retained values are interpolated, or extraploated around the footprint; the values for far away
-				 * locations are not used at all (they are in other dectors' footprint).
-				 */
-				if (lftcol5km < col5km_start) {
-					lftcol5km = col5km_start;	
-					rgtcol5km = col5km_start+1;
-				} 	
-				else if (rgtcol5km > col5km_end) {
-					lftcol5km = col5km_end-1;	
-					rgtcol5km = col5km_end;
-				}
-			
-				lftcol = rcgrid[lftcol5km];	
-				rgtcol = rcgrid[rgtcol5km];
+			/* Won't be enclosing: fine-resolution point is outside on the left  */
+			if (lftcol5km == -1)
+				lftcol5km = col5km_start;
 
-				anglft = ang[irow * ncol + lftcol];
-				angrgt = ang[irow * ncol + rgtcol];
+			/* The right 5km point */
+			for (icol5km = col5km_start; icol5km <= col5km_end; icol5km++) {
+				if (icol <= rcgrid[icol5km] && valid5km[icol5km] == 1) {
+					rgtcol5km = icol5km;
+					break;
+				}
+			}
+			/* Won't be enclosing: fine-resolution point is outside on the right  */
+			if (rgtcol5km == -1)
+				rgtcol5km = col5km_end;
 
+
+			/* If the two found 5km points enclose the fine-reso pixel, it is interpolation. 
+ 			 *
+ 			 * If they don't, it becomes extrapolation, which can be wild in that extrapolated values 
+ 			 * can be nagative or extremely high, or coincidentally be the fill value. But this 
+ 			 * does NOT pose a problem because later the detector's footprint is used to cookie-cut 
+ 			 * the angle values and the points with extrapolated values should be outside the
+ 			 * detector's footprint anyway.
+			 */
+			lftcol = rcgrid[lftcol5km];	
+			rgtcol = rcgrid[rgtcol5km];
+
+			anglft = ang[irow * ncol + lftcol];
+			angrgt = ang[irow * ncol + rgtcol];
+
+			if (lftcol5km == rgtcol5km) 
+				ang[irow * ncol + icol] = anglft;   /* or angrgt; Only one 5km value on this row */
+			else { 
+				/* Interpolation or extrapolation */
 				angint = anglft + (angrgt - anglft) * 1.0 / (rgtcol - lftcol) * (icol - lftcol);
 				ang[irow * ncol + icol] = angint;
 			}
 		}
 	}
 
-	/* Second pass: linear interp for the pixels in all columns. All columns should have some non-fill data.
+	/* Second pass: linear interpolation/extrapolation for the pixels in all columns is possible since all 
+ 	 * fine-reso columns should have at least one non-fill data value after first pass. 
 	 */
 	for (icol = 0; icol < ncol; icol++) {
+
+		/* The first row and last row in the 5km grid that holds data for this column. The data can
+ 		 * be original 5km data or from interpolation/extrapolation; that is, we no longer insist that
+ 		 * interpolation/extrapolation must be based on original 5km data, in the way we do in the first pass.
+ 		 */
 		row5km_start = -1;
 		row5km_end = -1;
 		for (irow5km = 0; irow5km < N5KM; irow5km++) {	 
-			/* Find the range of rows which have the 5km data or the interpreted data from the first pass*/
-			irow = rcgrid[irow5km];
-			k = irow * ncol + icol; 
+			k = rcgrid[irow5km] * ncol + icol;
 			if (ang[k] != ANGFILL && row5km_start == -1) 
 				row5km_start = irow5km;
-			 
-			if (ang[k] != ANGFILL) 
+
+			if (ang[k] != ANGFILL)
 				row5km_end = irow5km;
+
+			/* Think about: how likely is does interpolated/extrapolated value from the first 
+ 			 * pass happen to be ANGFILL?   Ignore for now. Nov 26, 2019*/
 		}
+		
 
-		if (row5km_start == -1) {
-			/*  Sep 7, 2016.
-			 * This could happen when there is only one row in the tile that have the 5km values
-			 * and the extrapolated value happen to be fill value for some columns that are 
-			 * far from the detector's footprint.
-			 *
-			 * The extrapolated values for pixels far from the detector's footprint will not used anyway */
-			/*
-			sprintf(message, "No 5km or interp data  data on 0-based column %d", icol);
-			Error(message);
-			return(-1);
-			*/
-			continue;
-		}
-		else if (row5km_start == row5km_end) {  
-			/* Only one value on this column; use it for all pixels on this column */
-			tmprow = rcgrid[row5km_start];
-			k5km = tmprow * ncol + icol;
-			for (irow = 0; irow < nrow; irow++) 
-				ang[irow * ncol + icol] = ang[k5km];
-		} 
-		else {
-			search_start = 0;
-			for (irow = 0; irow < nrow; irow++) {
-				for (irow5km = search_start; irow5km < N5KM-1; irow5km++) {
-					if (irow >= rcgrid[irow5km] && irow <= rcgrid[irow5km+1]) {
-						toprow5km  = irow5km;
-						botrow5km  = irow5km+1;
-						search_start = irow5km;	/* From where the search start for next fine-reso pixel*/
-						break;
-					}
-				}
+		for (irow = 0; irow < nrow; irow++) {	
 
-				if (toprow5km < row5km_start) {
-					toprow5km = row5km_start;
-					botrow5km = row5km_start+1;
-				}
-				if (botrow5km > row5km_end) {
-					toprow5km = row5km_end-1;
-					botrow5km = row5km_end;
-				}
+			/* For each fine-reso pixel on a column, find its two nearest
+	 		 * neighbors on the 5km grid that have angle data. The data can be original 5km data
+	 		 * or interpolated/extrapolated ones.
+			 */
+			toprow5km = -1;
+			botrow5km = -1;
 
-				toprow = rcgrid[toprow5km];
-				botrow = rcgrid[botrow5km];
-				angtop = ang[toprow * ncol + icol];
-				angbot = ang[botrow * ncol + icol];
-
-				/* For locations far from the detector's footprint, the extrapolated values can be
-				 * coincidentally fill value. This test would raise false alarm. 
-				 * The extrapolated values for pixels far from the detector's footprint will not used anyway */
-				/*
-				if (angtop == ANGFILL || angbot == ANGFILL) {
-					fprintf(stderr, "Somthing is wrong in interpreting the columns: second pass\n");
-					fprintf(stderr, "icol, irow = %d, %d, toprow = %d, botrow = %d\n", icol, irow, toprow, botrow);
-					fprintf(stderr, "top = %d, bot = %d\n", angtop, angbot);
-					fprintf(stderr, "row5km_start, end = %d, %d\n\n", row5km_start, row5km_end);
+			/* The top row in the 5km grid */
+			for (irow5km = row5km_end; irow5km >= row5km_start; irow5km--) {
+				k = rcgrid[irow5km] * ncol + icol;
+				if (irow >= rcgrid[irow5km] && ang[k] != ANGFILL) {
+					toprow5km = irow5km;
+					break;
 				}
-				*/
+			}
+			/* Won't be enclosing: fine-resolution point is outside on the top */
+			if (toprow5km == -1)
+				toprow5km = row5km_start;
+	
+			/* The bottom row in the 5km grid*/
+			for (irow5km = row5km_start; irow5km <= row5km_end; irow5km++) {
+				k = rcgrid[irow5km] * ncol + icol;
+				if (irow <= rcgrid[irow5km] && ang[k] != ANGFILL) {
+					botrow5km = irow5km;
+					break;
+				}
+			}
+			/* Won't be enclosing: fine-resolution point is outside at the bottom*/
+			if (botrow5km == -1)
+				botrow5km = row5km_end;
+
+
+			toprow = rcgrid[toprow5km];
+			botrow = rcgrid[botrow5km];
+			angtop = ang[toprow * ncol + icol];
+			angbot = ang[botrow * ncol + icol];
+
+			if (toprow5km == botrow5km) { 	/* Only one value in this column */
+				k = rcgrid[toprow5km] * ncol + icol;
+				ang[irow * ncol + icol] = ang[k];
+			} else {
+				/* Interp or Extrap */
 				angint = angtop + (angbot - angtop) * 1.0 / (botrow - toprow) * (irow - toprow);
 				ang[irow * ncol + icol] = angint;
 			}
@@ -774,19 +800,25 @@ int interp_s2ang_bilinear(uint16 *ang, int nrow, int ncol)
 }
 
 
-void find_substitute(uint8 *angleavail, uint8 *subId)
+int find_substitute(uint8 *angleavail, uint8 *subId)
 {
 	int ib, idx;
+	char found = 0;
 
 	for (ib = 0; ib < S2NBAND; ib++) {
 		subId[ib] = ib;	/* In case there is no missing */
+		found = 0;
 
-		if ( ! angleavail[ib]) {
+		if (angleavail[ib]) 
+			found = 1;
+		else {
 			if (ib <= 9) {  /* The VNIR bands, in the same focal plane */
-					/* Try in the VNIR bands first; SWIR is the last choice */ 
+					/* Try in the VNIR bands first; SWIR is the last choice.
+					 * That is, the wavelength order  */ 
 				for (idx = 0; idx < S2NBAND; idx++) {   
 					if (angleavail[idx]) {
 						subId[ib] = idx;
+						found = 1;
 						break;
 					}
 				}
@@ -794,7 +826,6 @@ void find_substitute(uint8 *angleavail, uint8 *subId)
 
 			/* For SWIR bands, try SWIR bands first */
 			if (ib > 9) {
-				char found = 0;
 				/* SWIR bands */
 				for (idx = 10; idx < S2NBAND; idx++) {
 					if (angleavail[idx]) {
@@ -809,6 +840,7 @@ void find_substitute(uint8 *angleavail, uint8 *subId)
 					for (idx = 0; idx <= 9; idx++) {   
 						if (angleavail[idx]) {
 							subId[ib] = idx;
+							found = 1;
 							break;
 						}
 					}
@@ -817,7 +849,7 @@ void find_substitute(uint8 *angleavail, uint8 *subId)
 		}
 	}
 
-	return;
+	return !found;		/* May 15, 2020. No longer a void function. */
 }
 
 /* close */
@@ -903,3 +935,4 @@ int close_s2ang(s2ang_t *s2ang)
 
 	return 0;
 }
+

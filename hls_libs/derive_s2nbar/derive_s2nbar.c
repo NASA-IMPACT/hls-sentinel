@@ -1,9 +1,35 @@
-/* Adjust 30m S2 surface reflectance for nadir view and the mean 
- * solar zenith angle at the time of S2 and L8 overpassing the latitude
- * of the tile center for the given day.
+/* Adjust the 30m S2 surface reflectance to nadir view and the mean solar 
+ * zenith angle for the day at the average time of S2 and L8 overpassing the 
+ * latitude of the tile center. For high latitude where the tile center is 
+ * above the hightest latitude that a sensor's nadir can get, use the mean of
+ * the observed solar zenith in each granule.
+ *
+ * Revised on May 15, 2020.
  */
 
-#define SENSOR S2
+/*
+#################### Credit -- Text from David Roy's group:
+#  ! The modeled solar zenith for HLS NBAR (v1.5) is defined as a function of latitude and day of
+#  ! the year (Li et al. 2019), and is calculated through a sensor overpass time model
+#  ! (Eq. 4 in Li et al. 2019).  The purpose of this definition is to resembling the observed
+#  ! solar zeniths (Zhang et al. 2016) as the c-factor approach (Roy et al. 2016) used in HLS
+#  ! NBAR derivation is for viewing zenith correction and does not allow solar zenith extrapolation.
+#  ! Note that the local overpass time at the Equator and the satellite inclination angle used in
+#  ! the sensor overpass time model (Eq. 4 in Li et al. 2019) take the average of the values for
+#  ! Landsat-8 and Sentinel-2.
+#
+#  ! Li, Z., Zhang, H.K., Roy, D.P., 2019. Investigation of Sentinel-2 bidirectional reflectance
+#  ! hot-spot sensing conditions. IEEE Transactions on Geoscience and Remote Sensing, 57(6), 3591-3598.
+#  !
+#  ! Roy, D.P., Zhang, H. K., Ju, J., Gomez-Dans, J. L., Lewis, P.E., Schaaf C.B., Sun, Q., Li, J.,
+#  ! Huang, H., Kovalskyy, V., 2016. A general method to normalize Landsat reflectance data to nadir
+#  ! BRDF adjusted reflectance. Remote Sensing of Environment, 176, 255-271.
+#  !
+#  ! Zhang, H. K., Roy, D.P., Kovalskyy, V., 2016. Optimal solar geometry definition for global
+#  ! long term Landsat time series bi-directional reflectance normalization. IEEE Transactions
+#  ! on Geoscience and Remote Sensing, 54(3), 1410-1418.
+################################################################################
+*/
 
 #include "hls_commondef.h"
 #include "s2at30m.h"
@@ -14,18 +40,34 @@
 #include "mean_solarzen.h"
 #include "util.h"
 
- /* The angle information in the ESA input can be missing for some bands
-  * and a substitute will be used if missing. 
-  * The angle of which band is used for the bands in a 13-element array.
+ /* The angle information in the early ESA SAFE can be missing for some bands.
+  * This NBAR code finds a angle substitute band for the missing bands.
+  * A 13-element array is created and initialized with 0-based band ID in 
+  * the wavelength order; if a band has no angle information, its band
+  * ID is replaced by the band ID of the substitude band.
   */
-#define ANGLEBAND  "AngleBand"
+#define ANGLEBAND  "NBAR_AngleBand"
+
+#define NBARSZ  "NBAR_SOLAR_ZENITH"
+int write_nbar_solarzenith(s2at30m_t *s2o, double nbarsz);
+
+/* The mean view zenith/azimuth angles in the very first band of Sentinel-2 are written out 
+ * as metadata by the following function.  Mean sun zenith/azimuth is written out metadata 
+ * too, but they are the same for all bands.
+ * 
+ * Not essential quantities, but a possible use of the mean sun angle is: For tiles with 
+ * its centers above the orbit nadir, the mean solar zenith may be used in NBAR because
+ * the desired normalized solar zenith based on Landsat and Sentinel-2 overpass time 
+ * can't be derived.
+ */
+int write_mean_angle(s2at30m_t *s2o, double msz, double msa, double mvz, double mva);
 
 int main(int argc, char *argv[])
 {
 	/* Command line parameters */
 	char fname_out[LINELEN];	/* an exact copy of input for update */
 	char fname_ang[LINELEN];
-	char fname_cfactor[LINELEN];
+	char fname_cfactor[LINELEN];	/* C-factor file, not archived */
 
 	s2ang_t s2ang;		/* 30-m angles */
 	s2at30m_t s2o;		/* output surface reflectance, after adjustment */
@@ -33,13 +75,21 @@ int main(int argc, char *argv[])
 
 	int ib, irow, icol, k; 
 
-	float sz, sa, vz, ra;
+	float sz, sa, vz, va, ra;
 
-	double msz;	/* Mean solar zenith for a location*/
-	double rossthick_MSZ, lisparseR_MSZ;	/* kernels at nadir and the mean solar zenith */
+	double nbarsz;	/* Mean solar zenith for a location*/
+	double rossthick_nbarsz, lisparseR_nbarsz;	/* kernels at nadir and the mean solar zenith */
 	double ratio;
 	double tmpref;
-	double cenlon, cenlat;
+	int utmzone;
+	double cenx, ceny, cenlon, cenlat;
+
+	/* The mean angles in band 0 as metadata */
+	double msz, msa, mvz, mva;
+	int n;
+	msz = msa = mvz = mva = 0;
+	n = 0;
+
 
 	int ret;
 
@@ -78,47 +128,99 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	/* Solar zenith used in BRDF adjustment. */
-	/* Example basename of filename: HLS.S30.T03VXH.2019202.v1.4.hdf */
-	char *cp;	
-	int yeardoy, year, doy;
-	cp = strrchr(s2o.fname, '/');	/* find basename */
-	if (cp == NULL)
-		cp = s2o.fname;
-	else
-		cp++;
-	/* Skip to yeardoy */
-	cp = strchr(cp, '.'); cp++;
-	cp = strchr(cp, '.'); cp++;
-	cp = strchr(cp, '.'); cp++;
-	yeardoy = atoi(cp);
-	year = yeardoy / 1000;
-	doy = yeardoy - year * 1000;
+	/* If the view zenith/azimuth SDS for a band is missing, assign the bandId 
+	 * of a band for which the angle SDS are available for use in NBAR instead.
+	 * Do this check for all bands. If the angle SDS  are not missing, the bandId 
+	 * will be that of the band itself.
+	 */
+	uint8 angsub[S2NBAND], sid;
+	ret = find_substitute(s2ang.angleavail, angsub);
+	if (ret != 0) {
+		Error("Angle for all bands are missing");
+		exit(1);
+	}
 
-	msz = mean_solarzen(s2o.zonehem, 
-			    s2o.ulx+(s2o.ncol/2.0 * HLS_PIXSZ),
-			    s2o.uly-(s2o.nrow/2.0 * HLS_PIXSZ),
-			    year,
-			    doy);
+	/* Calculate the mean solar zenith and azimuth in case that the input granule is
+	 * a consolidated one from twin granules, the mean values will be different from
+	 * the L1C values of the twin granules. For the same reason, calculate the mean 
+	 * view zenith and azimuth in the designated spectral band (band 0, coastal/aerosol).
+	 * These mean values angles are written out as metadata.
+	 *
+	 * May 15, 2020: For very high latitude, the calculated mean solar zenith
+	 * will also be used for NBAR since an "ideal" NBAR solar zenith can't be derived.
+	 */
+	ib = 0; 	/* coastal/aerosol band */
+	sid = angsub[ib];	/* Jut in case the angle for band 0 is missing. */
+	for (irow = 0; irow < s2o.nrow; irow++) {
+		for (icol = 0; icol < s2o.ncol; icol++) {
+			k = irow * s2o.ncol + icol;
+			if (s2o.ref[ib][k] == ref_fillval)
+				continue;
 
-	write_solarzenith(&s2o, msz);
+			if (s2ang.sz[k] == ANGFILL || s2ang.sa[k] == ANGFILL ||
+			    s2ang.vz[sid][k] == ANGFILL || s2ang.va[sid][k] == ANGFILL)
+				continue;
+
+			sz = s2ang.sz[k]/100.0;
+			sa = s2ang.sa[k]/100.0;
+			vz = s2ang.vz[sid][k]/100.0;
+			va = s2ang.va[sid][k]/100.0;
+
+			n++;
+                        msz = msz + (sz-msz)/n;
+                        msa = msa + (sa-msa)/n;
+                        mvz = mvz + (vz-mvz)/n;
+                        mva = mva + (va-mva)/n;
+		}	
+	}
+
+	/*** Derive solar zenith used in BRDF adjustment. 
+	 *
+	 * Sentinel-2 nadir does not go higher than 81.38 deg and Landsat does not go 
+	 * higher than 81.8.
+	 * Compute the tile center latitude rather than reading from a file. 
+	 */
+	utmzone = atoi(s2o.zonehem);
+	cenx = s2o.ulx + (s2o.ncol/2.0 * HLS_PIXSZ),
+	ceny = s2o.uly - (s2o.nrow/2.0 * HLS_PIXSZ);
+	if (strstr(s2o.zonehem, "S") && ceny > 0)  /* Sentinel 2 */ 
+		ceny -= 1E7;		/* accommodate GCTP */
+	utm2lonlat(utmzone, cenx, ceny, &cenlon, &cenlat);
+
+	fprintf(stderr, "cenlat = %lf\n", cenlat);
+	if (cenlat > 81.3) 
+		nbarsz = msz;
+	else {
+		/* Example basename of filename: HLS.S30.T03VXH.2019202.v1.4.hdf 
+	 	 * 				 HLS.S30.T03VXH.2019202TXXXXXX.v1.4.hdf 
+		 */
+		char *cp;	
+		int yeardoy, year, doy;
+		cp = strrchr(s2o.fname, '/');	/* find basename */
+		if (cp == NULL)
+			cp = s2o.fname;
+		else
+			cp++;
+		/* Skip to yeardoy */
+		cp = strchr(cp, '.'); cp++;
+		cp = strchr(cp, '.'); cp++;
+		cp = strchr(cp, '.'); cp++;
+		yeardoy = atoi(cp);
+		year = yeardoy / 1000;
+		doy = yeardoy - year * 1000;
+
+		nbarsz = mean_solarzen(s2o.zonehem, cenx, ceny, year, doy);
+	}
 
 	/* Processing time */
 	char creationtime[50];
 	getcurrenttime(creationtime);
 	SDsetattr(s2o.sd_id, HLSTIME, DFNT_CHAR8, strlen(creationtime), (VOIDP)creationtime);
 
-	rossthick_MSZ = RossThick(msz, 0, 0);
-	lisparseR_MSZ = LiSparseR(msz, 0, 0); 
+	/* Kernel values for NBAR solar zenith and nadir view */
+	rossthick_nbarsz = RossThick(nbarsz, 0, 0);
+	lisparseR_nbarsz = LiSparseR(nbarsz, 0, 0); 
 
-	/* If the view zenith or azimuth SDS for a band is missing, assign the bandId 
-	 * of a band for which the angle SDS are available to indicate which band's 
-	 * angle is used.  Do this check for all bands. If the angle SDS are
-	 * available, the bandId will be that of the band itself.
-	 *
-	 */
-	uint8 angleband[S2NBAND], sid;
-	find_substitute(s2ang.angleavail, angleband);
 
 	int nbaridx = -1;	/* Sequence number of a band in bands with BRDF correction*/
 	int specidx;		/* Band index in the MODIS BRDF coefficient array */
@@ -162,7 +264,7 @@ int main(int argc, char *argv[])
 
 		nbaridx++;
 
-		sid = angleband[ib];   /* bandId of the substitute band; or the ib itself. */
+		sid = angsub[ib];   /* bandId of the substitute band; or the ib itself. */
 
 		/* NBAR */
 		for (irow = 0; irow < s2o.nrow; irow++) {
@@ -180,10 +282,12 @@ int main(int argc, char *argv[])
 					continue;
 
 				sz = s2ang.sz[k]/100.0;
+				sa = s2ang.sa[k]/100.0;
 				vz = s2ang.vz[sid][k]/100.0;
-				ra = (s2ang.va[sid][k] - s2ang.sa[k])/100.0;
+				va = s2ang.va[sid][k]/100.0;
+				ra = va - sa;
 
-				ratio = (coeff[specidx][0] + coeff[specidx][1] * rossthick_MSZ + coeff[specidx][2] * lisparseR_MSZ) / 
+				ratio = (coeff[specidx][0] + coeff[specidx][1] * rossthick_nbarsz + coeff[specidx][2] * lisparseR_nbarsz) / 
 					(coeff[specidx][0] + coeff[specidx][1] * RossThick(sz, vz, ra) + coeff[specidx][2] * LiSparseR(sz, vz, ra));
 				tmpref = s2o.ref[ib][k] * ratio;
 				s2o.ref[ib][k] = asInt16(tmpref);
@@ -193,21 +297,69 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/* Write angleband as attribute */
+	/* Write angsub as attribute */
 	/*
-	fprintf(stderr, "angleband:\n");
+	fprintf(stderr, "angsub:\n");
 	for (ib = 0; ib < S2NBAND; ib++) {
-		fprintf(stderr, "%d %d\n", s2ang.angleavail[ib], angleband[ib]);
+		fprintf(stderr, "%d %d\n", s2ang.angleavail[ib], angsub[ib]);
 	}
 	*/
-	if (SDsetattr(s2o.sd_id, ANGLEBAND, DFNT_UINT8, S2NBAND, (VOIDP)angleband) == FAIL) {
+	if (SDsetattr(s2o.sd_id, ANGLEBAND, DFNT_UINT8, S2NBAND, (VOIDP)angsub) == FAIL) {
 		Error("Error in SDsetattr");
 		exit(1);
 	}
+
+	write_nbar_solarzenith(&s2o, nbarsz);
+	write_mean_angle(&s2o, msz, msa, mvz, mva);
 
 	close_s2ang(&s2ang);
 	close_s2at30m(&s2o);
 	close_cfactor(&cfactor);
 
 	return 0;
+}
+
+int write_nbar_solarzenith(s2at30m_t *s2o, double nbarsz)
+{
+	int ret;
+	ret = SDsetattr(s2o->sd_id, NBARSZ, DFNT_FLOAT64, 1, (VOIDP)&nbarsz);
+	if (ret != 0) {
+                Error("Error in SDsetattr");
+                exit(-1);
+        }
+
+        return(0);
+}
+
+int write_mean_angle(s2at30m_t *s2o, double msz, double msa, double mvz, double mva)
+{
+	int ret; 
+	/* MSZ */
+	ret = SDsetattr(s2o->sd_id, MSZ, DFNT_FLOAT64, 1, (VOIDP)&msz);
+	if (ret != 0) {
+		Error("Error in SDsetattr");
+		exit(-1);
+	}
+
+	/* MSA */
+	ret = SDsetattr(s2o->sd_id, MSA, DFNT_FLOAT64, 1, (VOIDP)&msa);
+	if (ret != 0) {
+		Error("Error in SDsetattr");
+		exit(-1);
+	}
+
+	/* MVZ */
+	ret = SDsetattr(s2o->sd_id, MVZ, DFNT_FLOAT64, 1, (VOIDP)&mvz);
+	if (ret != 0) {
+		Error("Error in SDsetattr");
+		exit(-1);
+	}
+	/* MVA */
+	ret = SDsetattr(s2o->sd_id, MVA, DFNT_FLOAT64, 1, (VOIDP)&mva);
+	if (ret != 0) {
+		Error("Error in SDsetattr");
+		exit(-1);
+	}
+
+	return(0);
 }

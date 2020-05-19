@@ -69,8 +69,11 @@ int interp_s2ang_bilinear(uint16 *ang, int nrow, int ncol);
  * 
  * When looking for the substitute, try the bands in the same focal plane first; bands in
  * in the other focal plane are the last resort.
+ *
+ * If the function return non-zero, it means all bands are missing. This should never happen, but 
+ * watch out. May 15, 2020.
  */
-void find_substitute(uint8 *angleavail, uint8 *subId);
+int find_substitute(uint8 *angleavail, uint8 *subId);
 
 /* close */
 int close_s2ang(s2ang_t *s2ang);
