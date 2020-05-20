@@ -619,12 +619,6 @@ void dup_s2at30m(s2at30m_t *in, s2at30m_t *out)
 	}
 }
 
-int write_solarzenith(s2at30m_t *s2at30m, double sz)
-{
-	SDsetattr(s2at30m->sd_id, "NBAR_Solar_Zenith", DFNT_FLOAT64, 1, (VOIDP)&sz);
-	return(0);
-}
-
 /* close */
 int close_s2at30m(s2at30m_t *s2at30m)
 {

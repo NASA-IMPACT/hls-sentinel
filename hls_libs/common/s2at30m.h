@@ -68,9 +68,4 @@ int close_s2at30m(s2at30m_t *s2at30m);
 void dup_s2at30m(s2at30m_t *in, s2at30m_t *out);
 int resample_s2to30m(s2r_t *s2r, s2at30m_t *s2at30m); 
 
-/* Write the solar_zenith angle used in NBAR */
-/* No longer needed for v1.5?  Let's write out David Roy's modeled solar zenith. Jul 29, 2019 */
-int write_solarzenith(s2at30m_t *s2at30m, double sz);
-
-
 #endif
