@@ -17,13 +17,14 @@ ENV PREFIX=/usr/local \
     PYTHONPATH="${PREFIX}/lib/python2.7/site-packages" \
     ACCODE=LaSRCL8V3.5.5
 
+
 # Move common files to source directory
 COPY ./hls_libs/common $SRC_DIR
 
 # Move and compile addFmaskSDS
 COPY ./hls_libs/addFmaskSDS ${SRC_DIR}/addFmaskSDS
 RUN cd ${SRC_DIR}/addFmaskSDS \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes \
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -32,7 +33,7 @@ RUN cd ${SRC_DIR}/addFmaskSDS \
 # Move and compile twohdf2one
 COPY ./hls_libs/twohdf2one ${SRC_DIR}/twohdf2one
 RUN cd ${SRC_DIR}/twohdf2one \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -41,7 +42,7 @@ RUN cd ${SRC_DIR}/twohdf2one \
 # Move and compile consolidate
 COPY ./hls_libs/consolidate ${SRC_DIR}/consolidate
 RUN cd ${SRC_DIR}/consolidate \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -50,7 +51,7 @@ RUN cd ${SRC_DIR}/consolidate \
 # Move and compile derive_s2ang
 COPY ./hls_libs/derive_s2ang ${SRC_DIR}/derive_s2ang
 RUN cd ${SRC_DIR}/derive_s2ang \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -59,7 +60,7 @@ RUN cd ${SRC_DIR}/derive_s2ang \
 # Move and compile derive_s2ang
 COPY ./hls_libs/consolidate_s2ang ${SRC_DIR}/consolidate_s2ang
 RUN cd ${SRC_DIR}/consolidate_s2ang \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -68,7 +69,7 @@ RUN cd ${SRC_DIR}/consolidate_s2ang \
 # Move and compile create_s2at30m
 COPY ./hls_libs/create_s2at30m ${SRC_DIR}/create_s2at30m
 RUN cd ${SRC_DIR}/create_s2at30m \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -77,7 +78,7 @@ RUN cd ${SRC_DIR}/create_s2at30m \
 # Move and compile derive_s2nbar
 COPY ./hls_libs/derive_s2nbar ${SRC_DIR}/derive_s2nbar
 RUN cd ${SRC_DIR}/derive_s2nbar \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -86,7 +87,7 @@ RUN cd ${SRC_DIR}/derive_s2nbar \
 # Move and compile L8like
 COPY ./hls_libs/L8like ${SRC_DIR}/L8like
 RUN cd ${SRC_DIR}/L8like \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -95,7 +96,7 @@ RUN cd ${SRC_DIR}/L8like \
 # Move and compile s2trim
 COPY ./hls_libs/trim ${SRC_DIR}/trim
 RUN cd ${SRC_DIR}/trim \
-    && make BUILD_STATIC=yes ENABLE_THREADING=yes\
+    && make \
     && make clean \
     && make install \
     && cd $SRC_DIR \
@@ -110,7 +111,7 @@ RUN pip install rio-cogeo==1.1.10 --no-binary rasterio --user
 
 RUN pip install git+https://github.com/NASA-IMPACT/hls-thumbnails
 
-RUN pip install git+https://github.com/NASA-IMPACT/hls-metadata-brian
+RUN pip install git+https://github.com/NASA-IMPACT/hls-metadata
 
 COPY ./python_scripts/* ${PREFIX}/bin/
 
