@@ -54,7 +54,7 @@ rm "$detfoo"
 
 cd "$safegranuledir"
 # Run Fmask
-/usr/local/MATLAB/application/run_Fmask_4_1.sh /usr/local/MATLAB/v96
+/usr/local/MATLAB/application/run_Fmask_4_2.sh /usr/local/MATLAB/v96
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
 
 # Convert to flat binary
