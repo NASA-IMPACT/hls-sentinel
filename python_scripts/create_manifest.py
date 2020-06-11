@@ -47,14 +47,14 @@ def main(argv):
             size = os.path.getsize(os.path.join(inputdir, filename))
             file_item["size"] = size
             with open(os.path.join(inputdir, filename), "rb") as f:
-                file_hash = hashlib.md5()
+                file_hash = hashlib.sha512()
                 while True:
                     chunk = f.read(8192)
                     if not chunk:
                         break
                     file_hash.update(chunk)
             file_item["checksum"] = file_hash.hexdigest()
-            file_item["checksumType"] = "MD5"
+            file_item["checksumType"] = "SHA512"
 
             normal_bucket = urlparse(bucket).geturl()
             file_item["uri"] = "%s/%s" % (normal_bucket, filename)
