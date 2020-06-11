@@ -92,7 +92,7 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 	char *pos;
 	int irow, icol;
 	int detid;
-	int xylen = 200;
+	int xylen = 200; 	/* initial length of x,y vectors */
 	double *x, *y, z;
 	double px, py;
 	int i, n, k;
@@ -183,20 +183,31 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 				/* Rasterize by point in polygon test */
 				for (irow = 0; irow < s2detfoo->nrow; irow++) {
   					int i, j;
-					int m = 0;
-					double ex[2];
+					int m = 0, im;
+					char in; 	/* pixel in polygon or not */	
+					double ex[100];	/* Expected x value on a polygon boundary for the given y. 
+							 * Predomimantly only two elements are needed in the array. Nov 27, 2019 */
 					py = s2detfoo->uly - (irow+0.5) * DETFOOPIXSZ;
 
 					/* Dec 19-20, 2018: Originally ESA masked the full extent of each detector's
-					 * footprint and the footprint of two adjacent detectors overlapped with each 
-					 * other. Later in extracting the angle data, HLS evenly split the overlapping area.
+					 * footprint and as a result the footprint of two adjacent detectors overlaps 
+					 * although data from only one detector is retained in the image for the overlap. 
+					 * Later in extracting the angle data, HLS had evenly split the overlapping area.
 					 * Starting on Nov 10 (?), 2018, the ESA footprint mask only demarcates the pixels
 					 * that are preserved in the L1C data. As a result, the number of points in the mask
 					 * increased substantially to make the application of the function pnpoly impractical.
 					 *
-					 * However, the idea of function pnpoly (found from internet) is applied. For each 
+					 * However, the idea of function pnpoly (found from internet) still applies. For each 
 					 * row of pixels, the left and right boundaries of the footprint are calculated from 
-					 * the mask vector and then the pixels are labeled accordingly. 
+					 * the mask vector and then each pixel's position is assessed with respect to the 
+					 * boundaries.
+					 *
+					 * Nov 27, 2019: Bug fix. The footprint polygon is not convex at high latitude, where
+					 * the flight path is almost horizontal in the image. So not necessarily only two 
+					 * boundaries to test against for a row of pixels. Back to the original idea of ray
+					 * tracing, but luckily all pixels in the same row have the same y, so the same set of 
+					 * expected X on the boundaries is used, although the number of points in the set can
+					 * be more than 2. 
 					 */
   					for (i = 0, j = n-1; i < n; j = i++) {
 						/* Note that the initial condition of the loop considers the first and last
@@ -205,43 +216,38 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 						 */
     						if ( (y[i]>py) != (y[j]>py) ) {
 							/* Very clever comparison to find a non-zero-length interval in y that
-							 * encloses py; it is not clear which is greater, y[i] or y[j].
+							 * encloses py; it does not matter which is greater, y[i] or y[j].
 							 * py can be equal to one of the end points.
 							 */
 	 						ex[m] = (x[j]-x[i]) * (py-y[i]) / (y[j]-y[i]) + x[i];
-							/* The expected x on the two boundaries. The footprint mask is simply 
-							 * convex polygon and so only two boundaries need to be considered. 
-							 */
 							m++;
-							if (m == 2) break;
+
+							/* m can be greater than 2. V1.4 code breaks the loop at m == 2 */ 
 						}
 					}
 
 					/* No footprint on this row of pixels; right edge near the top on the tile.
 					 * A bug fixed during testing. Dec 20, 2018 */
-					if (m != 2)
+					if (m == 0)
 						continue;
 
 					for (icol = 0; icol < s2detfoo->ncol; icol++) {
+						in = 0; 	/* Not in the polygon*/
 						px = s2detfoo->ulx + (icol+0.5) * DETFOOPIXSZ;
 						k = irow * s2detfoo->ncol + icol;
-
-						/* The pixel hasn't been flagged or it is in the overlap; the detector
-						 * ID on the left is always smaller, at least in the daytime image.
+					
+						/* The pixel hasn't been flagged.
+						 * Nov 27, 2019: no footprint overlap any more. 
 						 */
-						if (s2detfoo->detid[ib][k] == DETIDFILL || 
-						    s2detfoo->detid[ib][k] == detid-1) {
-							if ( (px < ex[0]) != (px < ex[1]) ) {
-							/* px is in the interval. Note the clever comparison since 
-							 * ex[0] is not neccessarily smaller than ex[1].
-							 */
-								if (s2detfoo->detid[ib][k] == DETIDFILL)
-									s2detfoo->detid[ib][k] = detid;
-								else
-									/* It is in the overlap between two detectors. Flag the overlap
-									 * with a special value. To accommodate earlier L1C data. */
-									s2detfoo->detid[ib][k] = s2detfoo->detid[ib][k]*NDETECTOR + detid;
+						if (s2detfoo->detid[ib][k] == DETIDFILL) {
+							for (im = 0; im < m; im++) {
+								if (px < ex[im])	/* borrowed from pnpoly.c. 11/27/19 */
+									in = !in;
 							}
+
+							if ( in ) 
+								s2detfoo->detid[ib][k] = detid;
+							
 						}
 					}
 				}
