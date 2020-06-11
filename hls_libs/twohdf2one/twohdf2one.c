@@ -3,7 +3,9 @@
   This code (1) combines the two files into one, 
 	    (2) aggregates from 10m for the 20m and 60m bands. 
    		CLOUD SDS is kept at 10m.
-	    (3) reflectance fillval changed from -100 to -1000
+	    (3) reflectance fillval changed from -100 to HLS_REFL_FILLVAL
+		Note: June 10, 2020
+			The Fortran output uses -100 as the fillval, but the C code uses -9999.
 		CLOUD fillval changed from -24 to 255. (in s2r.c)
 	    (4) add some attributes from the XML files.
 
@@ -145,7 +147,8 @@ int main(int argc, char *argv[])
 				for (ir = rowstart; ir <= rowend; ir++) {
 					for (ic = colstart; ic <= colend; ic++) {
 						kin = ir * s2in.ncol[0] + ic;
-						if (s2in.ref[ib][kin] != AC_S2_FILLVAL) {
+						// if (s2in.ref[ib][kin] != AC_S2_FILLVAL) {
+						if (s2in.ref[ib][kin] != HLS_REFL_FILLVAL) {
 							sum += s2in.ref[ib][kin];
 							n++;
 						}
