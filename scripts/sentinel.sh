@@ -12,6 +12,7 @@ workingdir="/var/scratch/${jobid}"
 bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
 replace_existing="$REPLACE_EXISTING"
+gibs_intermediate_bucket="$GIBS_INTERMEDIATE_BUCKET"
 
 # Remove tmp files on exit
 trap "rm -rf $workingdir; exit" INT TERM EXIT
@@ -48,7 +49,8 @@ set_output_names () {
   output_thumbnail="${workingdir}/${outputname}.jpg"
   output_metadata="${workingdir}/${outputname}.cmr.xml"
   bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
-
+  gibs_dir="${workingdir}/gibs"
+  gibs_intermediate_bucket_key="s3://${gibs_intermediate_bucket}/S30/${year}/${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
 }
@@ -176,3 +178,9 @@ else
   debug_bucket_key=s3://${debug_bucket}/${outputname}
   aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
 fi
+
+# Generate GIBS browse imagery
+echo "Generating browse imagery"
+mkdir -p "$gibs_dir"
+granule_to_gibs "$workingdir" "$gibs_dir" "$outputname"
+aws s3 sync "$gibs_dir" "$gibs_intermediate_bucket_key"
