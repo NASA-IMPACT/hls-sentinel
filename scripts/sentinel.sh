@@ -212,7 +212,7 @@ echo "All GIBS tiles created"
 
 gibs_archive="${outputname}.tgz"
 gibs_archive_path="${workingdir}/${gibs_archive}"
-tar -czf "$gibs_archive_path" "$gibs_merge_dir"
+tar -czf "$gibs_archive_path" -C "$gibs_merge_dir" .
 
 # Copy GIBS archive to S3.
 if [ -z "$debug_bucket" ]; then
