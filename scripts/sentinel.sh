@@ -13,6 +13,7 @@ bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
 replace_existing="$REPLACE_EXISTING"
 gibs_intermediate_bucket="$GIBS_INTERMEDIATE_BUCKET"
+gibs_bucket="$GIBS_OUTPUT_BUCKET"
 
 # Remove tmp files on exit
 trap "rm -rf $workingdir; exit" INT TERM EXIT
@@ -51,6 +52,8 @@ set_output_names () {
   bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
   gibs_dir="${workingdir}/gibs"
   gibs_intermediate_bucket_key="s3://${gibs_intermediate_bucket}/S30/${year}/${day_of_year}"
+  gibs_merge_dir="${workingdir}/gibs_merge"
+  gibs_bucket_key="s3://${gibs_bucket}"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
 }
@@ -179,8 +182,45 @@ else
   aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
 fi
 
-# Generate GIBS browse imagery
-echo "Generating browse imagery"
+# Generate GIBS browse sub tiles
+echo "Generating GIBS browse sub tiles"
 mkdir -p "$gibs_dir"
 granule_to_gibs "$workingdir" "$gibs_dir" "$outputname"
 aws s3 sync "$gibs_dir" "$gibs_intermediate_bucket_key"
+
+# Generate GIBS tiles
+echo "Generate GIBS tiles"
+mkdir -p "$gibs_merge_dir"
+for file in "$gibs_dir"/*.tif; do
+  # Find each gibs sub tile created for the granule
+  IFS='_'
+  read -ra file_components <<< "$file"
+  gibsid="${file_components[1]:0:6}"
+  echo "Creating GIBS tile for ${gibsid}"
+  # Find all the existing sub tiles for this gibs tile
+  aws s3 sync "$gibs_intermediate_bucket_key" "$gibs_dir" --exclude "*" \
+    --include "*_${gibsid}.tif"
+  gibs_tile="HLS.S30.${year}${day_of_year}.${gibsid}.tif"
+  gibs_tile_path="${gibs_merge_dir}/${gibs_tile}"
+  # Merge them into a single gibs tile
+  create_gibs_tile "$gibs_dir" "$gibs_tile_path" "$gibsid"
+  # Create tile metadata
+  gibs_tile_meta="${gibs_merge_dir}/HLS.S30.${year}${day_of_year}.${gibsid}.xml"
+  generate_metadata "$gibs_dir" "$gibs_tile_meta" "$gibsid" "$gibs_tile" "${year}${day_of_year}"
+done
+echo "All GIBS tiles created"
+
+gibs_archive="${outputname}.tgz"
+gibs_archive_path="${workingdir}/${gibs_archive}"
+tar -cvzf "$gibs_archive" "$gibs_merge_dir"
+
+# Copy GIBS archive to S3.
+if [ -z "$debug_bucket" ]; then
+    aws s3 cp "$gibs_archive_path" "${gibs_bucket_key}/${gibs_archive}" --profile gccprofile
+else
+  debug_bucket_key=s3://${debug_bucket}/${outputname}
+  aws s3 cp "$gibs_dir" "$debug_bucket_key" --recursive
+  aws s3 cp "$gibs_archive_path" "${debug_bucket_key}/${gibs_archive}"
+fi
+
+
