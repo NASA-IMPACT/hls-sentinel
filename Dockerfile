@@ -114,8 +114,8 @@ RUN pip install git+https://github.com/NASA-IMPACT/hls-thumbnails
 RUN pip install git+https://github.com/NASA-IMPACT/hls-metadata@v1.0
 
 RUN pip install wheel
-
-RUN pip install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.0
+ARG test=1
+RUN pip install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.1
 
 COPY ./python_scripts/* ${PREFIX}/bin/
 
