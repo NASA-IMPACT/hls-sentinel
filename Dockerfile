@@ -105,16 +105,15 @@ RUN cd ${SRC_DIR}/trim \
 COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S2A.txt
 COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
 
-RUN pip install --upgrade git+https://github.com/USGS-EROS/espa-python-library.git@v1.1.0#espa
+RUN pip install --upgrade git+https://github.com/NASA-IMPACT/espa-python-library.git@v1.0-hls
 
 RUN pip install rio-cogeo==1.1.10 --no-binary rasterio --user
 
-RUN pip install git+https://github.com/NASA-IMPACT/hls-thumbnails
+RUN pip install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
 
 RUN pip install git+https://github.com/NASA-IMPACT/hls-metadata@v1.0
 
 RUN pip install wheel
-ARG test=1
 RUN pip install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.1
 
 COPY ./python_scripts/* ${PREFIX}/bin/
