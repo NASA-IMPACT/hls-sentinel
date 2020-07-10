@@ -9,11 +9,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"i:h",["inputs2dir="])
     except getopt.GetoptError:
-        print 'get_s2_granule_dir.py -i <inputs2dir>'
+        print('get_s2_granule_dir.py -i <inputs2dir>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'get_s2_granule_dir.py -i <inputs2dir>'
+            print('get_s2_granule_dir.py -i <inputs2dir>')
             sys.exit()
         elif opt in ("-i", "--inputs2dir"):
             inputs2dir = arg

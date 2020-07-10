@@ -66,7 +66,7 @@ S2_BAND_NAMES = (
     "--cog-profile",
     "-p",
     "cogeo_profile",
-    type=click.Choice(cog_profiles.keys()),
+    type=click.Choice(list(cog_profiles.keys())),
     default="deflate",
     help="CloudOptimized GeoTIFF profile (default: deflate).",
 )

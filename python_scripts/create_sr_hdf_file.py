@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import sys, getopt
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 from espa import XMLError, XMLInterface
 from espa import MetadataError, Metadata
 
@@ -11,11 +11,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"i:o:f:h",["inputxmlfile=","outputxmlfile=","hdffile="])
     except getopt.GetoptError:
-        print 'create_sr_hdf_file.py -i <inputxmlfile> -o <outputxmlfile> -f <hdffile>'
+        print('create_sr_hdf_file.py -i <inputxmlfile> -o <outputxmlfile> -f <hdffile>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'test.py -i <inputxmlfile> -o <outputxmlfile> -f <hdffile>'
+            print('test.py -i <inputxmlfile> -o <outputxmlfile> -f <hdffile>')
             sys.exit()
         elif opt in ("-i", "--inputxmlfile"):
             inputxmlfile = arg
@@ -75,7 +75,7 @@ def main(argv):
 
     for band in mm.xml_object.bands.iterchildren():
         if band.get('product') != hls_product:
-            print(band.get('name'))
+            print((band.get('name')))
             mm.xml_object.bands.remove(band)
 
     mm.write(xml_filename=outputxmlfile)

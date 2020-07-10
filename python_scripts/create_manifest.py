@@ -4,7 +4,7 @@ import os
 import shutil
 import json
 import hashlib
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 def main(argv):
     inputdir = ''
@@ -17,11 +17,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"i:o:b:c:p:j:h",["inputdir=","outputfile=","bucket=","collection=","product","jobid",])
     except getopt.GetoptError:
-        print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product> -j <jobid>'
+        print('create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product> -j <jobid>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product> -j <jobid>'
+            print('create_manifest.py -i <inputdir> -o <outputfile> -b <bucket> -c <collection> -p <product> -j <jobid>')
             sys.exit()
         elif opt in ("-i", "--inputdir"):
             inputdir = arg
