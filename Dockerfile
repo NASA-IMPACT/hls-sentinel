@@ -1,5 +1,4 @@
-ARG AWS_ACCOUNT_ID
-FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base:latest
+FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:latest
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -14,7 +13,7 @@ ENV PREFIX=/usr/local \
     HDFLINK=" -lmfhdf -ldf -lm" \
 		L8_AUX_DIR=/usr/local/src \
     ECS_ENABLE_TASK_IAM_ROLE=true \
-    PYTHONPATH="${PREFIX}/lib/python2.7/site-packages" \
+    PYTHONPATH="${PYTHONPATH}:${PREFIX}/lib/python3.6/site-packages" \
     ACCODE=LaSRCL8V3.5.5
 
 
@@ -105,17 +104,17 @@ RUN cd ${SRC_DIR}/trim \
 COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S2A.txt
 COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
 
-RUN pip install --upgrade git+https://github.com/NASA-IMPACT/espa-python-library.git@v1.0-hls
+RUN pip3 install --upgrade git+https://github.com/NASA-IMPACT/espa-python-library.git@v1.0-hls
 
-RUN pip install rio-cogeo==1.1.10 --no-binary rasterio --user
+RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
 
-RUN pip install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
 
-RUN pip install git+https://github.com/NASA-IMPACT/hls-metadata@v1.0
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.0
 
-RUN pip install wheel
-RUN pip install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.1
-
+RUN pip3 install wheel
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.1
+RUN pip3 install libxml2-python3
 COPY ./python_scripts/* ${PREFIX}/bin/
 
 COPY ./scripts/* ${PREFIX}/bin/
