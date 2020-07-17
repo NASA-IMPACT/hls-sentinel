@@ -1,3 +1,4 @@
+ARG AWS_ACCOUNT_ID
 FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:latest
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
@@ -14,8 +15,12 @@ ENV PREFIX=/usr/local \
 		L8_AUX_DIR=/usr/local/src \
     ECS_ENABLE_TASK_IAM_ROLE=true \
     PYTHONPATH="${PYTHONPATH}:${PREFIX}/lib/python3.6/site-packages" \
-    ACCODE=LaSRCL8V3.5.5
+    ACCODE=LaSRCL8V3.5.5 \
+    LC_ALL=en_US.utf-8 \
+    LANG=en_US.utf-8
 
+# The Python click library requires a set locale
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8 
 
 # Move common files to source directory
 COPY ./hls_libs/common $SRC_DIR
@@ -104,7 +109,9 @@ RUN cd ${SRC_DIR}/trim \
 COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S2A.txt
 COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
 
-RUN pip3 install --upgrade git+https://github.com/NASA-IMPACT/espa-python-library.git@v1.0-hls
+# RUN pip3 install --upgrade git+https://github.com/NASA-IMPACT/espa-python-library.git@v1.0-hls
+# RUN pip3 uninstall -y espa-python-library
+# RUN pip3 install git+https://github.com/repository-preservation/espa-python-library@v2.0.0#espa
 
 RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
 
