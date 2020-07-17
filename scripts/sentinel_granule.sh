@@ -112,4 +112,7 @@ s2trim "$hls_sr_output_hdf"
 
 # Remove intermediate files.
 cd "$granuledir"
-rm -rf "$safedirectory"
+# Keep all intermediate files in debug mode
+if [ -z "$debug_bucket" ]; then
+  rm -rf "$safedirectory"
+fi
