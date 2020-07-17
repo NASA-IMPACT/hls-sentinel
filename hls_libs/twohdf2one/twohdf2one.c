@@ -9,7 +9,10 @@
 		CLOUD fillval changed from -24 to 255. (in s2r.c)
 	    (4) add some attributes from the XML files.
 	    (5) July 17, 2020
-		LSRD LaSRC 3.02 uses (refl + 0.2) * (1/0.0000275); change back to refl * 10000
+	        a. To change LSRD LaSRC 3.02 uint16 result to int16.
+		   Although HLS data type is int16, the HLS I/O code reads the bits of uint16 correctly
+		   and these bits can be cast back to uint16.
+		b. LSRD LaSRC 3.02 uses (refl + 0.2) * (1/0.0000275); change back to refl * 10000
 
 	File one:
 	short band01(fakeDim0, fakeDim1) ;
@@ -68,6 +71,7 @@ int main(int argc, char *argv[])
 	int n, k, ntot;
 	int ret;
 	char creationtime[50];
+	unsigned short us;	/* To copy the int16 bits into this. Jul 17, 2020 */
 
 	if (argc != 7) {
 		fprintf(stderr, "Usage: %s part1 part2 safexml granulexml accodename out\n", argv[0]);
@@ -151,8 +155,12 @@ int main(int argc, char *argv[])
 						kin = ir * s2in.ncol[0] + ic;
 						// July 19, 2020: 0 is EROS nodata value.
 						//if (s2in.ref[ib][kin] != HLS_REFL_FILLVAL) {
-						if (s2in.ref[ib][kin] > 0 ) {
-							sum += s2in.ref[ib][kin];
+					        //	sum += s2in.ref[ib][kin];
+						// HLS code reads LSRD uint16 as int16, but
+						// the int16 and uint16 bits are the same. Recast to uint16. 
+						memcpy(&us, &s2in.ref[ib][kin], 2);
+						if (us > 0 ) {
+							sum += us;
 							n++;
 						}
 					}
