@@ -8,6 +8,8 @@
 			The Fortran output uses -100 as the fillval, but the C code uses -9999.
 		CLOUD fillval changed from -24 to 255. (in s2r.c)
 	    (4) add some attributes from the XML files.
+	    (5) July 17, 2020
+		LSRD LaSRC 3.02 uses (refl + 0.2) * (1/0.0000275); change back to refl * 10000
 
 	File one:
 	short band01(fakeDim0, fakeDim1) ;
@@ -110,7 +112,7 @@ int main(int argc, char *argv[])
 	getcurrenttime(creationtime);
 	SDsetattr(s2out.sd_id, HLSTIME, DFNT_CHAR8, strlen(creationtime), (VOIDP)creationtime);
 
-	/* Resample the 20m and 60 bands to their original resolutions */
+	/* Resample the 20m and 60 bands to their original resolutions; for 10m bands, a simple copy */
 	/* Can't use the dup_s2 function because the input has no QA bands */
 	for (ib = 0; ib < S2NBAND; ib++) {
 		switch (ib) {
@@ -147,19 +149,19 @@ int main(int argc, char *argv[])
 				for (ir = rowstart; ir <= rowend; ir++) {
 					for (ic = colstart; ic <= colend; ic++) {
 						kin = ir * s2in.ncol[0] + ic;
-						// if (s2in.ref[ib][kin] != AC_S2_FILLVAL) {
-						if (s2in.ref[ib][kin] != HLS_REFL_FILLVAL) {
+						// July 19, 2020: 0 is EROS nodata value.
+						//if (s2in.ref[ib][kin] != HLS_REFL_FILLVAL) {
+						if (s2in.ref[ib][kin] > 0 ) {
 							sum += s2in.ref[ib][kin];
 							n++;
 						}
 					}
 				}
 
-				/* if (n > 0) {
-				 * Make sure there is no fill value in the box.  Jun 26, 2019.
-				 */	
+				/* Make sure there is no fill value in the box.  Jun 26, 2019.  */	
 				if (n == ntot) {
 					kout = irow * ncol + icol;
+					sum = (sum * 0.0000275 - 0.2) * 10000;
 					s2out.ref[ib][kout] = asInt16(sum / n);
 				}
 			}
