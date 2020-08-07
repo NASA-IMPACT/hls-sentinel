@@ -144,7 +144,7 @@ mv "${nbar_input}.hdr" "${output_hdf}.hdr"
 
 # Convert to COGs
 echo "Converting to COGs"
-hdf_to_cog.py "$output_hdf" --output-dir "$workingdir"
+hdf_to_cog.py "$output_hdf" --output-dir "$workingdir" --product S30
 
 # Create thumbnail
 echo "Creating thumbnail"
