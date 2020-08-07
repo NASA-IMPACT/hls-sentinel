@@ -31,6 +31,7 @@ set_output_names () {
   IFS='_'
   read -ra granulecomponents <<< "$1"
   # Include twin in bucket key for s3 when argument is included.
+  # this is necessary for LPDAAC's ingestion timing.
   twinkey=""
   if [ ! -z "$2" ]; then
     twinkey="/twin"
