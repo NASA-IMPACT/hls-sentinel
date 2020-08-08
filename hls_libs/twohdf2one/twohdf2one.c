@@ -8,6 +8,11 @@
 			The Fortran output uses -100 as the fillval, but the C code uses -9999.
 		CLOUD fillval changed from -24 to 255. (in s2r.c)
 	    (4) add some attributes from the XML files.
+	    (5) July 17, 2020
+	        a. To change LSRD LaSRC 3.02 uint16 result to int16.
+		   Although HLS data type is int16, the HLS I/O code reads the bits of uint16 correctly
+		   and these bits can be cast back to uint16.
+		b. LSRD LaSRC 3.02 uses (refl + 0.2) * (1/0.0000275); change back to refl * 10000
 
 	File one:
 	short band01(fakeDim0, fakeDim1) ;
@@ -66,6 +71,7 @@ int main(int argc, char *argv[])
 	int n, k, ntot;
 	int ret;
 	char creationtime[50];
+	unsigned short us;	/* To copy the int16 bits into this. Jul 17, 2020 */
 
 	if (argc != 7) {
 		fprintf(stderr, "Usage: %s part1 part2 safexml granulexml accodename out\n", argv[0]);
@@ -110,7 +116,7 @@ int main(int argc, char *argv[])
 	getcurrenttime(creationtime);
 	SDsetattr(s2out.sd_id, HLSTIME, DFNT_CHAR8, strlen(creationtime), (VOIDP)creationtime);
 
-	/* Resample the 20m and 60 bands to their original resolutions */
+	/* Resample the 20m and 60 bands to their original resolutions; for 10m bands, a simple copy */
 	/* Can't use the dup_s2 function because the input has no QA bands */
 	for (ib = 0; ib < S2NBAND; ib++) {
 		switch (ib) {
@@ -147,19 +153,23 @@ int main(int argc, char *argv[])
 				for (ir = rowstart; ir <= rowend; ir++) {
 					for (ic = colstart; ic <= colend; ic++) {
 						kin = ir * s2in.ncol[0] + ic;
-						// if (s2in.ref[ib][kin] != AC_S2_FILLVAL) {
-						if (s2in.ref[ib][kin] != HLS_REFL_FILLVAL) {
-							sum += s2in.ref[ib][kin];
+						// July 19, 2020: 0 is EROS nodata value.
+						//if (s2in.ref[ib][kin] != HLS_REFL_FILLVAL) {
+					        //	sum += s2in.ref[ib][kin];
+						// HLS code reads LSRD uint16 as int16, but
+						// the int16 and uint16 bits are the same. Recast to uint16. 
+						memcpy(&us, &s2in.ref[ib][kin], 2);
+						if (us > 0 ) {
+							sum += us;
 							n++;
 						}
 					}
 				}
 
-				/* if (n > 0) {
-				 * Make sure there is no fill value in the box.  Jun 26, 2019.
-				 */	
+				/* Make sure there is no fill value in the box.  Jun 26, 2019.  */	
 				if (n == ntot) {
 					kout = irow * ncol + icol;
+					sum = (sum * 0.0000275 - 0.2) * 10000;
 					s2out.ref[ib][kout] = asInt16(sum / n);
 				}
 			}
