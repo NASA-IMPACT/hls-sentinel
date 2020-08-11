@@ -158,7 +158,8 @@ create_metadata "$output_hdf" --save "$output_metadata"
 echo "Generating manifest"
 manifest_name="${outputname}.json"
 manifest="${workingdir}/${manifest_name}"
-create_manifest.py -i "$workingdir" -o "$manifest" -b "$bucket_key" -c "HLSS30" -p "$outputname" -j "$jobid"
+create_manifest "$workingdir" "$manifest" "$bucket_key" "HLSS30" \
+  "$outputname" "$jobid"
 
 # Copy output to S3.
 mkdir -p ~/.aws
