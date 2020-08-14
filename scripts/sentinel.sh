@@ -226,7 +226,7 @@ for file in "$gibs_dir"/*.tif; do
     --include "*.xml" --profile gccprofile --recursive
 
     # Copy manifest to S3 to signal completion.
-    aws s3 cp "$manifest" "${gibs_bucket_key}/${manifest_name}" \
+    aws s3 cp "$gibs_manifest" "${gibs_bucket_key}/${gibs_manifest_name}" \
       --profile gccprofile
   else
     # Copy all intermediate files to debug bucket.
