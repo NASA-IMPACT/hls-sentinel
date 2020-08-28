@@ -54,7 +54,7 @@ set_output_names () {
   gibs_dir="${workingdir}/gibs"
   gibs_intermediate_bucket_key="s3://${gibs_intermediate_bucket}/S30/${year}/${day_of_year}"
   gibs_merge_dir="${workingdir}/gibs_merge"
-  gibs_bucket_key="s3://${gibs_bucket}"
+  gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
 }
@@ -159,7 +159,7 @@ echo "Generating manifest"
 manifest_name="${outputname}.json"
 manifest="${workingdir}/${manifest_name}"
 create_manifest "$workingdir" "$manifest" "$bucket_key" "HLSS30" \
-  "$outputname" "$jobid"
+  "$outputname" "$jobid" false
 
 # Copy output to S3.
 mkdir -p ~/.aws
@@ -218,15 +218,15 @@ for file in "$gibs_dir"/*.tif; do
   gibs_manifest_name="${gibs_tile_no_extension}.json"
   gibs_manifest="${gibs_id_dir}/${gibs_manifest_name}"
   create_manifest "$gibs_id_dir" "$gibs_manifest" "$gibs_bucket_key" "HLSS30" \
-  "$gibs_tile_no_extension" "$jobid"
+  "$gibs_tile_no_extension" "$jobid" true
 
   # Copy GIBS tile package to S3.
   if [ -z "$debug_bucket" ]; then
-    aws s3 cp "$gibs_id_dir" "$gibs_bucket_key" --exclude "*" --include "*.tif" \
+    aws s3 cp "$gibs_id_dir" "$gibs_bucket_key/${gibsid}" --exclude "*" --include "*.tif" \
     --include "*.xml" --profile gccprofile --recursive
 
     # Copy manifest to S3 to signal completion.
-    aws s3 cp "$gibs_manifest" "${gibs_bucket_key}/${gibs_manifest_name}" \
+    aws s3 cp "$gibs_manifest" "${gibs_bucket_key}/${gibsid}/${gibs_manifest_name}" \
       --profile gccprofile
   else
     # Copy all intermediate files to debug bucket.
