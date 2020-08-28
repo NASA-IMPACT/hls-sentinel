@@ -217,8 +217,9 @@ for file in "$gibs_dir"/*.tif; do
   # Create manifest
   gibs_manifest_name="${gibs_tile_no_extension}.json"
   gibs_manifest="${gibs_id_dir}/${gibs_manifest_name}"
-  create_manifest "$gibs_id_dir" "$gibs_manifest" "$gibs_bucket_key" "HLSS30" \
-  "$gibs_tile_no_extension" "$jobid" true
+  create_manifest "$gibs_id_dir" "$gibs_manifest" "$gibs_bucket_key/${gibsid}" \
+    "HLS_S30_Nadir_BRDF_Adjusted_Reflectance_v1.5_STD" \
+    "$gibs_tile_no_extension" "$jobid" true
 
   # Copy GIBS tile package to S3.
   if [ -z "$debug_bucket" ]; then
