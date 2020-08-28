@@ -1,6 +1,6 @@
 ARG AWS_ACCOUNT_ID
 # FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:latest
-FROM hls-base-c2
+FROM hls-base-collection2-3.0.4
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -116,7 +116,7 @@ RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.4
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.3
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.5
 
 RUN pip3 install wheel
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.3
@@ -125,7 +125,7 @@ RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.2
 COPY ./python_scripts/* ${PREFIX}/bin/
 
 COPY ./scripts/* ${PREFIX}/bin/
-
+ENV OMP_NUM_THREADS=2
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["sentinel.sh"]
 
