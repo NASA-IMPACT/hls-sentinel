@@ -1,6 +1,5 @@
 ARG AWS_ACCOUNT_ID
-# FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:latest
-FROM hls-base-collection2-3.0.4
+FROM ${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:3.0.4
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
