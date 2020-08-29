@@ -3,20 +3,13 @@ This repository contains the Dockerfiles for running the HLS sentinel granule co
 
 The `hls-sentinel` image uses [hls-base](https://github.com/NASA-IMPACT/hls-base/) as base image.
 
-After building your base dependencies image and pushing it to ECR you can build the `hls-sentinel` processing image with:
-
+### Development
+You will require an AWS profile which has ECR pull permissions for the base image.
 ```shell
-$ docker build --no-cache --build-arg AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID}" -t hls-sentinel .
+$ docker build --no-cache -t hls-sentinel .
 ```
 
-Note: The command above assumes you have exported an environment variable `AWS_ACCOUNT_ID` which references the AWS account where the hls-base reference image is stored.
+### CI
+The repository contains two CI workflows. When commits are pushed to the dev branch a new image is built and pushed to ECR with no tag.
 
-You can then tag this `hls-sentinel` image as `<AWS_ACCOUNT_ID>.dkr.ecr.us-west-2.amazonaws.com/hls-sentinel` and push it to ECR.
-
-```shell
-$ docker tag hls-sentinel "${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-sentinel"
-```
-
-```shell
-$ docker push "${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/hls-sentinel"
-```
+When a new release is created from master a new image is built and pushed to ECR with the release version as a tag.
