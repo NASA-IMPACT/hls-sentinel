@@ -1,4 +1,4 @@
-FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:v3.0.4
+FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:threading_log
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
