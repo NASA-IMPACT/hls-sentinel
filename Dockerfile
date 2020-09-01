@@ -123,7 +123,7 @@ RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.2
 COPY ./python_scripts/* ${PREFIX}/bin/
 
 COPY ./scripts/* ${PREFIX}/bin/
-ENV OMP_NUM_THREADS=2
+ENV OMP_NUM_THREADS=4
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["sentinel.sh"]
 
