@@ -114,7 +114,7 @@ RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.4
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.6
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.7
 
 RUN pip3 install wheel
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.3
