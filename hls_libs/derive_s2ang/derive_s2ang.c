@@ -1,4 +1,5 @@
-/* Derive the per-pixel S2 solar and detector angles for all bands in an image.
+/* Derive the per-pixel S2 zenith/azimuth and the same view zenith/azimuth
+ * for all bands. 
  */
 
 #include <stdio.h>
@@ -62,7 +63,7 @@ int main(int argc, char *argv[])
 		Error(message);
 		exit(ret);
 	}
-	split_overlap(&s2detfoo);
+	//split_overlap(&s2detfoo);	// Nov 28, 2019. No overlap any more.
 
 	/* Create an empty angle file */
 	strcpy(s2ang.fname, fname_ang);

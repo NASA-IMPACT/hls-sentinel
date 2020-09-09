@@ -1,10 +1,11 @@
 /* Adjust the 30m S2 surface reflectance to nadir view and the mean solar 
- * zenith angle for the day at the average time of S2 and L8 overpassing the 
+ * zenith angle for the day at the respective time of S2 and L8 overpassing the 
  * latitude of the tile center. For high latitude where the tile center is 
  * above the hightest latitude that a sensor's nadir can get, use the mean of
  * the observed solar zenith in each granule.
  *
  * Revised on May 15, 2020.
+ * Sep 7, 2020: All bands use the same view zenith and azimuth.
  */
 
 /*
@@ -40,21 +41,10 @@
 #include "mean_solarzen.h"
 #include "util.h"
 
- /* The angle information in the early ESA SAFE can be missing for some bands.
-  * This NBAR code finds a angle substitute band for the missing bands.
-  * A 13-element array is created and initialized with 0-based band ID in 
-  * the wavelength order; if a band has no angle information, its band
-  * ID is replaced by the band ID of the substitude band.
-  */
-#define ANGLEBAND  "NBAR_AngleBand"
-
 #define NBARSZ  "NBAR_SOLAR_ZENITH"
 int write_nbar_solarzenith(s2at30m_t *s2o, double nbarsz);
 
-/* The mean view zenith/azimuth angles in the very first band of Sentinel-2 are written out 
- * as metadata by the following function.  Mean sun zenith/azimuth is written out metadata 
- * too, but they are the same for all bands.
- * 
+/* The mean solar and view zenith/azimuth angles.
  * Not essential quantities, but a possible use of the mean sun angle is: For tiles with 
  * its centers above the orbit nadir, the mean solar zenith may be used in NBAR because
  * the desired normalized solar zenith based on Landsat and Sentinel-2 overpass time 
@@ -128,29 +118,16 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	/* If the view zenith/azimuth SDS for a band is missing, assign the bandId 
-	 * of a band for which the angle SDS are available for use in NBAR instead.
-	 * Do this check for all bands. If the angle SDS  are not missing, the bandId 
-	 * will be that of the band itself.
-	 */
-	uint8 angsub[S2NBAND], sid;
-	ret = find_substitute(s2ang.angleavail, angsub);
-	if (ret != 0) {
-		Error("Angle for all bands are missing");
-		exit(1);
-	}
-
 	/* Calculate the mean solar zenith and azimuth in case that the input granule is
 	 * a consolidated one from twin granules, the mean values will be different from
 	 * the L1C values of the twin granules. For the same reason, calculate the mean 
-	 * view zenith and azimuth in the designated spectral band (band 0, coastal/aerosol).
+	 * view zenith and azimuth.
 	 * These mean values angles are written out as metadata.
 	 *
 	 * May 15, 2020: For very high latitude, the calculated mean solar zenith
 	 * will also be used for NBAR since an "ideal" NBAR solar zenith can't be derived.
 	 */
 	ib = 0; 	/* coastal/aerosol band */
-	sid = angsub[ib];	/* Jut in case the angle for band 0 is missing. */
 	for (irow = 0; irow < s2o.nrow; irow++) {
 		for (icol = 0; icol < s2o.ncol; icol++) {
 			k = irow * s2o.ncol + icol;
@@ -158,13 +135,13 @@ int main(int argc, char *argv[])
 				continue;
 
 			if (s2ang.sz[k] == ANGFILL || s2ang.sa[k] == ANGFILL ||
-			    s2ang.vz[sid][k] == ANGFILL || s2ang.va[sid][k] == ANGFILL)
+			    s2ang.vz[k] == ANGFILL || s2ang.va[k] == ANGFILL)
 				continue;
 
 			sz = s2ang.sz[k]/100.0;
 			sa = s2ang.sa[k]/100.0;
-			vz = s2ang.vz[sid][k]/100.0;
-			va = s2ang.va[sid][k]/100.0;
+			vz = s2ang.vz[k]/100.0;
+			va = s2ang.va[k]/100.0;
 
 			n++;
                         msz = msz + (sz-msz)/n;
@@ -226,21 +203,6 @@ int main(int argc, char *argv[])
 	int specidx;		/* Band index in the MODIS BRDF coefficient array */
 	for (ib = 0; ib < S2NBAND; ib++) {
 		switch (ib) {
-			/*
-			case 0:  specidx =  0; break;
-			case 1:  specidx =  0; break;
-			case 2:  specidx =  1; break;
-			case 3:  specidx =  2; break;
-			case 4:  specidx = -1; break;
-			case 5:  specidx = -1; break;
-			case 6:  specidx = -1; break;
-			case 7:  specidx =  3; break;
-			case 8:  specidx =  3; break;
-			case 9:  specidx = -1; break;
-			case 10: specidx = -1; break;
-			case 11: specidx =  4; break;
-			case 12: specidx =  5; break;
-			*/
 			/* Aug 5, 2019: with the added SDSU coefficients for the red edge bands. 
 			 * Landsat processing will skip these bands.
 			 * No correction on water vapor or cirrus bands */
@@ -261,10 +223,7 @@ int main(int argc, char *argv[])
 		if (specidx == -1)
 			continue;
 
-
 		nbaridx++;
-
-		sid = angsub[ib];   /* bandId of the substitute band; or the ib itself. */
 
 		/* NBAR */
 		for (irow = 0; irow < s2o.nrow; irow++) {
@@ -278,13 +237,13 @@ int main(int argc, char *argv[])
 				 * Sep 10, 2016: a substitute band may not be able to find.
 				 */
 				if (s2ang.sz[k] == ANGFILL || s2ang.sa[k] == ANGFILL ||
-				    s2ang.vz[sid][k] == ANGFILL || s2ang.va[sid][k] == ANGFILL)
+				    s2ang.vz[k] == ANGFILL || s2ang.va[k] == ANGFILL)
 					continue;
 
 				sz = s2ang.sz[k]/100.0;
 				sa = s2ang.sa[k]/100.0;
-				vz = s2ang.vz[sid][k]/100.0;
-				va = s2ang.va[sid][k]/100.0;
+				vz = s2ang.vz[k]/100.0;
+				va = s2ang.va[k]/100.0;
 				ra = va - sa;
 
 				ratio = (coeff[specidx][0] + coeff[specidx][1] * rossthick_nbarsz + coeff[specidx][2] * lisparseR_nbarsz) / 
@@ -295,18 +254,6 @@ int main(int argc, char *argv[])
 				cfactor.ratio[nbaridx][k] = ratio;
 			}
 		}
-	}
-
-	/* Write angsub as attribute */
-	/*
-	fprintf(stderr, "angsub:\n");
-	for (ib = 0; ib < S2NBAND; ib++) {
-		fprintf(stderr, "%d %d\n", s2ang.angleavail[ib], angsub[ib]);
-	}
-	*/
-	if (SDsetattr(s2o.sd_id, ANGLEBAND, DFNT_UINT8, S2NBAND, (VOIDP)angsub) == FAIL) {
-		Error("Error in SDsetattr");
-		exit(1);
 	}
 
 	write_nbar_solarzenith(&s2o, nbarsz);
