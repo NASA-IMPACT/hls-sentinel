@@ -1,13 +1,14 @@
 #!/bin/bash
 # shellcheck disable=SC2153
-# shellcheck disable=SC1091
-
+# shellcheck disable=SC1091 
 # Exit on any error
 set -o errexit
 
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
 bucket="$OUTPUT_BUCKET"
+# shellcheck disable=SC2034
+inputbucket="$INPUT_BUCKET"
 workingdir="/var/scratch/${jobid}"
 bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
