@@ -1,4 +1,6 @@
-#/bin/bash
+#!/bin/bash
+# shellcheck disable=SC2153
+# shellcheck source=./scripts/sentinel_granule.sh
 
 # Exit on any error
 set -o errexit
@@ -6,7 +8,6 @@ set -o errexit
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
 bucket="$OUTPUT_BUCKET"
-inputbucket="$INPUT_BUCKET"
 workingdir="/var/scratch/${jobid}"
 bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
@@ -15,6 +16,7 @@ gibs_intermediate_bucket="$GIBS_INTERMEDIATE_BUCKET"
 gibs_bucket="$GIBS_OUTPUT_BUCKET"
 
 # Remove tmp files on exit
+# shellcheck disable=SC2064
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
@@ -32,7 +34,7 @@ set_output_names () {
   # Include twin in bucket key for s3 when argument is included.
   # this is necessary for LPDAAC's ingestion timing.
   twinkey=""
-  if [ ! -z "$2" ]; then
+  if [ -n "$2" ]; then
     twinkey="/twin"
   fi
   date=${granulecomponents[2]:0:15}
@@ -59,7 +61,7 @@ set_output_names () {
 }
 
 exit_if_exists () {
-  if [ ! -z "$replace_existing" ]; then
+  if [ -n "$replace_existing" ]; then
     # Check if output folder key exists
     exists=$(aws s3 ls "${bucket_key}/" | wc -l)
     if [ ! "$exists" = 0 ]; then
@@ -167,7 +169,7 @@ echo "region=us-east-1" >> ~/.aws/config
 echo "output=text" >> ~/.aws/config
 
 echo "[gccprofile]" > ~/.aws/credentials
-echo "role_arn = ${GCC_ROLE_ARN}" >> ~/.aws/credentials
+echo "role_arn = ${bucket_role_arn}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
 if [ -z "$debug_bucket" ]; then
