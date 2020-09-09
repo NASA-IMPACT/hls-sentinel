@@ -1,6 +1,6 @@
 #!/bin/bash
 # shellcheck disable=SC2153
-# shellcheck source=./scripts/sentinel_granule.sh
+# shellcheck disable=SC1091
 
 # Exit on any error
 set -o errexit
