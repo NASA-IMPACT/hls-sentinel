@@ -169,8 +169,8 @@ int main(int argc, char *argv[])
 				/* Make sure there is no fill value in the box.  Jun 26, 2019.  */	
 				if (n == ntot) {
 					kout = irow * ncol + icol;
-					sum = (sum * 0.0000275 - 0.2) * 10000;
-					s2out.ref[ib][kout] = asInt16(sum / n);
+					sum = (sum * 0.0000275/n - 0.2) * 10000;
+					s2out.ref[ib][kout] = asInt16(sum);
 				}
 			}
 		}
