@@ -1,20 +1,22 @@
-#/bin/bash
-
+#!/bin/bash
+# shellcheck disable=SC2153
+# shellcheck disable=SC1091
 # Exit on any error
 set -o errexit
 
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
 bucket="$OUTPUT_BUCKET"
+# shellcheck disable=SC2034
 inputbucket="$INPUT_BUCKET"
 workingdir="/var/scratch/${jobid}"
 bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
 replace_existing="$REPLACE_EXISTING"
-gibs_intermediate_bucket="$GIBS_INTERMEDIATE_BUCKET"
 gibs_bucket="$GIBS_OUTPUT_BUCKET"
 
 # Remove tmp files on exit
+# shellcheck disable=SC2064
 trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
@@ -32,7 +34,7 @@ set_output_names () {
   # Include twin in bucket key for s3 when argument is included.
   # this is necessary for LPDAAC's ingestion timing.
   twinkey=""
-  if [ ! -z "$2" ]; then
+  if [ -n "$2" ]; then
     twinkey="/twin"
   fi
   date=${granulecomponents[2]:0:15}
@@ -51,15 +53,13 @@ set_output_names () {
   output_metadata="${workingdir}/${outputname}.cmr.xml"
   bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
   gibs_dir="${workingdir}/gibs"
-  gibs_intermediate_bucket_key="s3://${gibs_intermediate_bucket}/S30/${year}/${day_of_year}"
-  gibs_merge_dir="${workingdir}/gibs_merge"
   gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
 }
 
 exit_if_exists () {
-  if [ ! -z "$replace_existing" ]; then
+  if [ -n "$replace_existing" ]; then
     # Check if output folder key exists
     exists=$(aws s3 ls "${bucket_key}/" | wc -l)
     if [ ! "$exists" = 0 ]; then
@@ -167,7 +167,7 @@ echo "region=us-east-1" >> ~/.aws/config
 echo "output=text" >> ~/.aws/config
 
 echo "[gccprofile]" > ~/.aws/credentials
-echo "role_arn = ${GCC_ROLE_ARN}" >> ~/.aws/credentials
+echo "role_arn = ${bucket_role_arn}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
 if [ -z "$debug_bucket" ]; then
@@ -183,54 +183,38 @@ else
   aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
 fi
 
-# Generate GIBS browse sub tiles
-echo "Generating GIBS browse sub tiles"
+# Generate GIBS browse subtiles
+echo "Generating GIBS browse subtiles"
 mkdir -p "$gibs_dir"
 granule_to_gibs "$workingdir" "$gibs_dir" "$outputname"
-aws s3 sync "$gibs_dir" "$gibs_intermediate_bucket_key"
 
-# Generate GIBS tiles
-echo "Generate GIBS tiles"
-mkdir -p "$gibs_merge_dir"
-for file in "$gibs_dir"/*.tif; do
-  # Find each gibs sub tile created for the granule
-  IFS='_'
-  read -ra file_components <<< "$file"
-  gibsid="${file_components[1]:0:6}"
-  echo "Creating GIBS tile for ${gibsid}"
-  # Find all the existing sub tiles for this gibs tile
-  aws s3 sync "$gibs_intermediate_bucket_key" "$gibs_dir" --exclude "*" \
-    --include "*_${gibsid}.tif"
-  # Create intermediate directory for gibs tile
-  gibs_id_dir="${gibs_merge_dir}/${gibsid}"
-  mkdir -p "$gibs_id_dir"
-  gibs_basename="HLS.S30.${year}${day_of_year}.${gibsid}"
-  gibs_tile_base="${gibs_id_dir}/${gibs_basename}"
-  # Merge subtiles into a single gibs tile
-  gibs_tile=$(create_gibs_tile "$gibs_dir" "$gibs_tile_base" "$gibsid")
-  gibs_tile_no_extension=$(basename "$gibs_tile" .tif)
-  # Create tile metadata
-  gibs_tile_meta="${gibs_id_dir}/${gibs_tile_no_extension}.xml"
-  create_gibs_metadata "$gibs_dir" "$gibs_tile_meta" "$gibsid" "$gibs_tile" \
-    "${year}${day_of_year}"
-  # Create manifest
-  gibs_manifest_name="${gibs_tile_no_extension}.json"
-  gibs_manifest="${gibs_id_dir}/${gibs_manifest_name}"
-  create_manifest "$gibs_id_dir" "$gibs_manifest" "$gibs_bucket_key/${gibsid}" \
-    "HLSS30" "$gibs_tile_no_extension" "$jobid" true
+for gibs_id_dir in "$gibs_dir"* ; do
+    if [ -d "$gibs_id_dir" ]; then
+      gibsid=$(basename "$gibs_id_dir")
+      # shellcheck disable=SC2206
+      xmlfiles=(${gibs_id_dir}/*.xml)
+      xml="${xmlfiles[0]}"
+      subtile_basename=$(basename "$xml" .xml)
+      subtile_manifest_name="${subtile_basename}.json"
+      subtile_manifest="${gibs_id_dir}/${subtile_manifest_name}"
+      create_manifest "$gibs_id_dir" "$subtile_manifest" \
+        "$gibs_bucket_key/${gibsid}" "HLSS30" "$subtile_basename" \
+        "$jobid" true
 
-  # Copy GIBS tile package to S3.
-  if [ -z "$debug_bucket" ]; then
-    aws s3 cp "$gibs_id_dir" "$gibs_bucket_key/${gibsid}" --exclude "*" --include "*.tif" \
-    --include "*.xml" --profile gccprofile --recursive
+      # Copy GIBS tile package to S3.
+      if [ -z "$debug_bucket" ]; then
+        aws s3 cp "$gibs_id_dir" "$gibs_bucket_key/${gibsid}" --exclude "*"  \
+          --include "*.tif" --include "*.xml" --profile gccprofile --recursive
 
-    # Copy manifest to S3 to signal completion.
-    aws s3 cp "$gibs_manifest" "${gibs_bucket_key}/${gibsid}/${gibs_manifest_name}" \
-      --profile gccprofile
-  else
-    # Copy all intermediate files to debug bucket.
-    debug_bucket_key=s3://${debug_bucket}/${outputname}
-    aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive
-  fi
+        # Copy manifest to S3 to signal completion.
+        aws s3 cp "$subtile_manifest" \
+          "${gibs_bucket_key}/${gibsid}/${subtile_manifest_name}" \
+          --profile gccprofile
+      else
+        # Copy all intermediate files to debug bucket.
+        debug_bucket_key=s3://${debug_bucket}/${outputname}
+        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive
+      fi
+    fi
 done
 echo "All GIBS tiles created"
