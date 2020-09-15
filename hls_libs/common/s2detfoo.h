@@ -28,9 +28,9 @@ typedef struct {
 	double uly;
 
 	int32 sd_id;
-	int32 sds_id_detid[S2NBAND];
+	int32 sds_id_detid;
 
-	uint8 *detid[S2NBAND];
+	uint8 *detid;
 } s2detfoo_t;			
 
 /* open s2 detfoo for read or create */
