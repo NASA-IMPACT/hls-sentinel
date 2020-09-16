@@ -197,7 +197,7 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       subtile_basename=$(basename "$xml" .xml)
       subtile_manifest_name="${subtile_basename}.json"
       subtile_manifest="${gibs_id_dir}/${subtile_manifest_name}"
-      gibs_id_bucket_key= "$gibs_bucket_key/${gibsid}" 
+      gibs_id_bucket_key="$gibs_bucket_key/${gibsid}" 
       echo "Gibs id bucket key is ${gibs_id_bucket_key}"
 
       create_manifest "$gibs_id_dir" "$subtile_manifest" \
