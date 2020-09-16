@@ -187,7 +187,6 @@ fi
 echo "Generating GIBS browse subtiles"
 mkdir -p "$gibs_dir"
 granule_to_gibs "$workingdir" "$gibs_dir" "$outputname"
-ls -R "$gibs_dir"
 for gibs_id_dir in "$gibs_dir"/* ; do
     if [ -d "$gibs_id_dir" ]; then
       gibsid=$(basename "$gibs_id_dir")
