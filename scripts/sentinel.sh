@@ -197,18 +197,20 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       subtile_basename=$(basename "$xml" .xml)
       subtile_manifest_name="${subtile_basename}.json"
       subtile_manifest="${gibs_id_dir}/${subtile_manifest_name}"
+      gibs_id_bucket_key= "$gibs_bucket_key/${gibsid}" 
+      echo "Gibs id bucket key is ${gibs_id_bucket_key}"
 
       create_manifest "$gibs_id_dir" "$subtile_manifest" \
-        "$gibs_bucket_key/${gibsid}" "HLSS30" "$subtile_basename" \
-        "$jobid" true
+        "$gibs_id_bucket_key" "HLSS30" "$subtile_basename" "$jobid" true
+
       # Copy GIBS tile package to S3.
       if [ -z "$debug_bucket" ]; then
-        aws s3 cp "$gibs_id_dir" "$gibs_bucket_key/${gibsid}" --exclude "*"  \
+        aws s3 cp "$gibs_id_dir" "$gibs_id_bucket_key" --exclude "*"  \
           --include "*.tif" --include "*.xml" --profile gccprofile --recursive
 
         # Copy manifest to S3 to signal completion.
         aws s3 cp "$subtile_manifest" \
-          "${gibs_bucket_key}/${gibsid}/${subtile_manifest_name}" \
+          "${gibs_id_bucket_key}/${subtile_manifest_name}" \
           --profile gccprofile
       else
         # Copy all intermediate files to debug bucket.
