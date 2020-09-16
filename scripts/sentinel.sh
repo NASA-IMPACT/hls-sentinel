@@ -187,20 +187,22 @@ fi
 echo "Generating GIBS browse subtiles"
 mkdir -p "$gibs_dir"
 granule_to_gibs "$workingdir" "$gibs_dir" "$outputname"
-
+ls -R "$gibs_dir"
 for gibs_id_dir in "$gibs_dir"* ; do
     if [ -d "$gibs_id_dir" ]; then
       gibsid=$(basename "$gibs_id_dir")
+      echo "Processing gibs id ${gibsid}"
       # shellcheck disable=SC2206
       xmlfiles=(${gibs_id_dir}/*.xml)
       xml="${xmlfiles[0]}"
       subtile_basename=$(basename "$xml" .xml)
+      echo "$subtile_basename"
       subtile_manifest_name="${subtile_basename}.json"
       subtile_manifest="${gibs_id_dir}/${subtile_manifest_name}"
+
       create_manifest "$gibs_id_dir" "$subtile_manifest" \
         "$gibs_bucket_key/${gibsid}" "HLSS30" "$subtile_basename" \
         "$jobid" true
-
       # Copy GIBS tile package to S3.
       if [ -z "$debug_bucket" ]; then
         aws s3 cp "$gibs_id_dir" "$gibs_bucket_key/${gibsid}" --exclude "*"  \
