@@ -59,15 +59,13 @@ int main(int argc, char *argv[])
 	for (irow = 0; irow < s2angC.nrow; irow++) {
 		for (icol = 0; icol < s2angC.ncol; icol++) {
 			k = irow * s2angC.ncol + icol;
-			for (ib = 0; ib < S2NBAND; ib++) {
-				if (s2angA.vz[ib][k] != ANGFILL) {
-					s2angC.vz[ib][k] = s2angA.vz[ib][k]; 
-					s2angC.va[ib][k] = s2angA.va[ib][k]; 
-				}
-				if (s2angB.vz[ib][k] != ANGFILL) {
-					s2angC.vz[ib][k] = s2angB.vz[ib][k]; 
-					s2angC.va[ib][k] = s2angB.va[ib][k]; 
-				}
+			if (s2angA.vz[k] != ANGFILL) {
+				s2angC.vz[k] = s2angA.vz[k]; 
+				s2angC.va[k] = s2angA.va[k]; 
+			}
+			if (s2angB.vz[k] != ANGFILL) {
+				s2angC.vz[k] = s2angB.vz[k]; 
+				s2angC.va[k] = s2angB.va[k]; 
 			}
 
 			/* Solar angles are actually identical in twin granules */
@@ -80,12 +78,6 @@ int main(int argc, char *argv[])
 				s2angC.sa[k] = s2angB.sa[k];
 			}
 		}
-	}
-
-	/* Angle is considered available if it is savailable for both of the twin granules */
-	for (ib = 0; ib < S2NBAND; ib++) {
-		s2angC.angleavail[ib] = (s2angA.angleavail[ib] == 1 && s2angB.angleavail[ib] == 1);
-		SDsetattr(s2angC.sd_id, ANGLEAVAIL, DFNT_UINT8, S2NBAND, s2angC.angleavail);
 	}
 
 	ret = close_s2ang(&s2angC);
