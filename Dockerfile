@@ -120,7 +120,7 @@ RUN pip3 install wheel
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.5
 RUN pip3 install libxml2-python3
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.2
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.0
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.1
 
 COPY ./scripts/* ${PREFIX}/bin/
 ENV OMP_NUM_THREADS=4
