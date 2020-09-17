@@ -27,7 +27,7 @@ aws s3 cp "$inputgranule" "$safezip"
 unzip -q "$safezip" -d "$granuledir"
 
 # Get GRANULE sub directory
-grandir_id=$(get_s2_granule_dir.py -i "${safedirectory}")
+grandir_id=$(get_s2_granule_dir "${safedirectory}")
 safegranuledir="${safedirectory}/GRANULE/${grandir_id}"
 
 # Run derive_s2ang
@@ -38,7 +38,7 @@ xml=$(find "$safegranuledir" -maxdepth 1 -type f -name "*.xml")
 
 # Check solar zenith angle.
 echo "Check solar azimuth"
-solar_zenith_valid=$(check_solar_zenith.py -i "$xml")
+solar_zenith_valid=$(check_solar_zenith_sentinel "$xml")
 if [ "$solar_zenith_valid" == "invalid" ]; then
   echo "Invalid solar zenith angle. Exiting now"
   exit 3
@@ -54,7 +54,13 @@ rm "$detfoo"
 
 cd "$safegranuledir"
 # Run Fmask
-/usr/local/MATLAB/application/run_Fmask_4_2.sh /usr/local/MATLAB/v96
+fmask_stdout=$(/usr/local/MATLAB/application/run_Fmask_4_2.sh /usr/local/MATLAB/v96)
+fmask_valid=$(parse_fmask "${fmask_stdout}")
+if [ "$fmask_valid" == "invalid" ]; then
+  echo "Fmask reports no clear pixels. Exiting now"
+  exit 4
+fi
+
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
 
 # Convert to flat binary
@@ -97,8 +103,8 @@ hls_sr_combined_hdf="${espa_id}_sr_combined.hdf"
 hls_sr_output_hdf="$granuleoutput"
 
 # Create ESPA xml files using HLS v1.5 band names.
-create_sr_hdf_file.py -i "$espa_xml" -o "$hls_espa_one_xml" -f one
-create_sr_hdf_file.py -i "$espa_xml" -o "$hls_espa_two_xml" -f two
+create_sr_hdf_xml "$espa_xml" "$hls_espa_one_xml" one
+create_sr_hdf_xml "$espa_xml" "$hls_espa_two_xml" two
 
 # Convert ESPA xml files to HDF
 convert_espa_to_hdf --xml="$hls_espa_one_xml" --hdf="$sr_hdf_one"
