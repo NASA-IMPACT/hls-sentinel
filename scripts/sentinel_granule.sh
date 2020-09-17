@@ -55,7 +55,9 @@ rm "$detfoo"
 cd "$safegranuledir"
 # Run Fmask
 /usr/local/MATLAB/application/run_Fmask_4_2.sh /usr/local/MATLAB/v96 >> fmask_out.txt
-fmask_stdout=$(tail -n 1 fmask_out.txt)
+fmask_file=$(cat fmask_out.txt)
+echo "$fmask_file"
+fmask_stdout=$(tail -2 fmask_out.txt | head -1)
 echo "$fmask_stdout"
 echo "Running parse_fmask"
 fmask_valid=$(parse_fmask "$fmask_stdout")
