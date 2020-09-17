@@ -55,7 +55,9 @@ rm "$detfoo"
 cd "$safegranuledir"
 # Run Fmask
 fmask_stdout=$(/usr/local/MATLAB/application/run_Fmask_4_2.sh /usr/local/MATLAB/v96)
-fmask_valid=$(parse_fmask "${fmask_stdout}")
+echo "$fmask_stdout"
+echo "Running parse_fmask"
+fmask_valid=$(parse_fmask "$fmask_stdout")
 if [ "$fmask_valid" == "invalid" ]; then
   echo "Fmask reports no clear pixels. Exiting now"
   exit 4
