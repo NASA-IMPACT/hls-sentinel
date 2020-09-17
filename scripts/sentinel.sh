@@ -43,7 +43,7 @@ set_output_names () {
   day=${date:6:2}
   hms=${date:8:7}
 
-  day_of_year=$(get_doy.py -y "${year}" -m "${month}" -d "${day}")
+  day_of_year=$(get_doy "${year}" "${month}" "${day}")
   outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.v1.5"
   output_hdf="${workingdir}/${outputname}.hdf"
   nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
