@@ -55,10 +55,11 @@ rm "$detfoo"
 cd "$safegranuledir"
 # Run Fmask
 /usr/local/MATLAB/application/run_Fmask_4_2.sh /usr/local/MATLAB/v96 >> fmask_out.txt
-fmask_stdout=$(tail -4 fmask_out.txt)
+fmask_stdout=$(tail -n 1 fmask_out.txt)
 echo "$fmask_stdout"
 echo "Running parse_fmask"
 fmask_valid=$(parse_fmask "$fmask_stdout")
+echo "Granule is ${fmask_valid}"
 if [ "$fmask_valid" == "invalid" ]; then
   echo "Fmask reports no clear pixels. Exiting now"
   exit 4
@@ -66,6 +67,7 @@ fi
 
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
 
+echo "Converting to flat binary"
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
