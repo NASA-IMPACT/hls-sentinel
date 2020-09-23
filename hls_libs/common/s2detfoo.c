@@ -14,13 +14,11 @@ int open_s2detfoo(s2detfoo_t *s2detfoo, intn access_mode)
 	int32 dim_sizes[2];
 	int32 rank, data_type, n_attrs;
 	int32 start[2], edge[2];
-	int ib;
 
 	char message[MSGLEN];
 
 	s2detfoo->access_mode = access_mode;
-	for (ib = 0; ib < S2NBAND; ib++)
-		s2detfoo->detid[ib] = NULL;
+	s2detfoo->detid = NULL;
 
 	/* For DFACC_READ, find the image dimension from band 1.
 	 * For DFACC_CREATE, image dimension is given.
@@ -47,27 +45,24 @@ int open_s2detfoo(s2detfoo_t *s2detfoo, intn access_mode)
 		dim_sizes[0] = s2detfoo->nrow;
 		dim_sizes[1] = s2detfoo->ncol;
 
+		strcpy(sds_name, "detfoo");
 
-		for (ib = 0; ib < S2NBAND; ib++) {
-			sprintf(sds_name, "%s_detfoo", S2_SDS_NAME[ib]);
+		if ((s2detfoo->detid = (uint8*)calloc(dim_sizes[0] * dim_sizes[1], sizeof(uint8))) == NULL) {
+			Error("Cannot allocate memory");
+			exit(1);
+		}
+		if ((s2detfoo->sds_id_detid = SDcreate(s2detfoo->sd_id, sds_name, DFNT_UINT8, rank, dim_sizes)) == FAIL) {
+			sprintf(message, "Cannot create SDS %s", sds_name);
+			Error(message);
+			return(ERR_CREATE);
+		}
+		PutSDSDimInfo(s2detfoo->sds_id_detid, dimnames[0], 0);
+		PutSDSDimInfo(s2detfoo->sds_id_detid, dimnames[1], 1);
+		SDsetcompress(s2detfoo->sds_id_detid, comp_type, &c_info);
 
-			if ((s2detfoo->detid[ib] = (uint8*)calloc(dim_sizes[0] * dim_sizes[1], sizeof(uint8))) == NULL) {
-				Error("Cannot allocate memory");
-				exit(1);
-			}
-			if ((s2detfoo->sds_id_detid[ib] = SDcreate(s2detfoo->sd_id, sds_name, DFNT_UINT8, rank, dim_sizes)) == FAIL) {
-				sprintf(message, "Cannot create SDS %s", sds_name);
-				Error(message);
-				return(ERR_CREATE);
-			}
-			PutSDSDimInfo(s2detfoo->sds_id_detid[ib], dimnames[0], 0);
-			PutSDSDimInfo(s2detfoo->sds_id_detid[ib], dimnames[1], 1);
-			SDsetcompress(s2detfoo->sds_id_detid[ib], comp_type, &c_info);
-
-			for (irow = 0; irow < s2detfoo->nrow; irow++) {
-				for (icol = 0; icol < s2detfoo->ncol; icol++)
-					s2detfoo->detid[ib][irow * s2detfoo->ncol + icol] = DETIDFILL;
-			}
+		for (irow = 0; irow < s2detfoo->nrow; irow++) {
+			for (icol = 0; icol < s2detfoo->ncol; icol++)
+				s2detfoo->detid[irow * s2detfoo->ncol + icol] = DETIDFILL;
 		}
 	}
 
@@ -79,9 +74,12 @@ int open_s2detfoo(s2detfoo_t *s2detfoo, intn access_mode)
  * Rasterize the footprint vector polygon and fill the polygon with detector id.
  * For the overlapped area,  fill with id_left * NDETECTOR + id_right (id_left and id_right are
  * the detector id on the left and right respectively.
- * Use the b01 gml filename to find the gml of all bands.
+ * Use the b01 gml filename to find the gml of B06 (Sep 7, 2020: Although now derive 
+ * angle from B06 only, still pass in b01 gml so that the interface won't change. )
  *
  * Return 100 if the detfoo vector is not found.  May 1, 2017.
+ *
+ * Use the gml of B06 for all other bands. Sep 7, 2020.
  */
 int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 {
@@ -96,7 +94,6 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 	double *x, *y, z;
 	double px, py;
 	int i, n, k;
-	int ib;
 	char found_vector; 	/* Indicator whether vector is present for a band */
 	char message[MSGLEN];
 	int no_vector = 100;    /* Return if no vector is found */
@@ -113,155 +110,154 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 		Error(message);
 		return(1);
 	}
-	for (ib = 0; ib < S2NBAND; ib++) {
-		strcpy(fname_gml, fname_b01_gml);
-		pos = strstr(fname_gml, "B01"); /* Works for both naming conventions */
-		strncpy(pos, S2_SDS_NAME[ib], 3);
-		if ((fgml = fopen(fname_gml, "r")) == NULL) {
-			sprintf(message, "Cannot open for read: %s", fname_gml);
-			Error(message);
-			return(1);
-		}
+	strcpy(fname_gml, fname_b01_gml);
+	pos = strstr(fname_gml, "B01"); /* Works for both naming conventions */
+	strncpy(pos, S2_SDS_NAME[5], 3);	/* Use the gml for B06 */
+	if ((fgml = fopen(fname_gml, "r")) == NULL) {
+		sprintf(message, "Cannot open for read: %s", fname_gml);
+		Error(message);
+		return(1);
+	}
 
-		found_vector = 0;
-		while (fgets(line, sizeof(line), fgml)) {
-			 /* footprint extent can be smaller than tile extent. */
+	found_vector = 0;
+	while (fgets(line, sizeof(line), fgml)) {
+		 /* footprint extent can be smaller than tile extent. */
 
-			/* One polygon (footprint for one detector module) */
-			if (strstr(line, "<eop:MaskFeature gml:id=\"detector_footprint-B")) {
+		/* One polygon (footprint for one detector module) */
+		if (strstr(line, "<eop:MaskFeature gml:id=\"detector_footprint-B")) {
 
-				/* Dec 6, 2016 
-				 * Some flawed gml does not give the footprint vector at all. 
+			/* Dec 6, 2016 
+			 * Some flawed gml does not give the footprint vector at all. 
+			 */
+			found_vector = 1;
+				
+			/* Example: <eop:MaskFeature gml:id="detector_footprint-B8A-12-0">  */
+			pos = strstr(line, "-");
+			pos = strstr(pos+1, "-"); /* Skip band number since one band per gml file */
+			detid = atoi(pos+1);
+
+			/* Skip 5 lines and look for the expected characters*/
+			for (i = 0; i < 5; i++) 
+				fgets(line, sizeof(line), fgml);	
+			/* Line of vector */
+			fscanf(fgml, "%s", str);
+			fscanf(fgml, "%s", str);
+			if (strstr(str, "srsDimension=\"3\">") == NULL) {
+				sprintf(message, "Pattern \"srsDimension\" not found. %s", fname_gml);
+				Error(message);
+				return(1);
+			}
+
+			n = 0;
+			sscanf(str+strlen("srsDimension=\"3\">"), "%lf", &x[n]); /* First point */
+			fscanf(fgml, "%lf", &y[n]);
+			fscanf(fgml, "%lf", &z);
+			n++;
+			while (1) {
+				fscanf(fgml, "%s", str);
+				if (strstr(str, "</gml:posList>"))
+					break;
+				else {
+					/* str contains x */
+					if (n == xylen) {
+						xylen *= 2;
+						if ((x = realloc(x, xylen*sizeof(double))) == NULL || 
+						    (y = realloc(y, xylen*sizeof(double))) == NULL) {
+							sprintf(message, "Cannot open for read: %s", fname_gml);
+							Error(message);
+							return(1);
+						}
+					}
+
+					x[n] = atof(str);
+					fscanf(fgml, "%lf", &y[n]);
+					fscanf(fgml, "%lf", &z);
+					n++;
+				}
+			}
+
+			/* Rasterize by point in polygon test */
+			for (irow = 0; irow < s2detfoo->nrow; irow++) {
+  				int i, j;
+				int m = 0, im;
+				char in; 	/* pixel in polygon or not */	
+				double ex[100];	/* Expected x value on a polygon boundary for the given y. 
+						 * Predomimantly only two elements are needed in the array. Nov 27, 2019 */
+				py = s2detfoo->uly - (irow+0.5) * DETFOOPIXSZ;
+
+				/* Dec 19-20, 2018: Originally ESA masked the full extent of each detector's
+				 * footprint and as a result the footprint of two adjacent detectors overlaps 
+				 * although data from only one detector is retained in the image for the overlap. 
+				 * Later in extracting the angle data, HLS had evenly split the overlapping area.
+				 * Starting on Nov 10 (?), 2018, the ESA footprint mask only demarcates the pixels
+				 * that are preserved in the L1C data. As a result, the number of points in the mask
+				 * increased substantially to make the application of the function pnpoly impractical.
+				 *
+				 * However, the idea of function pnpoly (found from internet) still applies. For each 
+				 * row of pixels, the left and right boundaries of the footprint are calculated from 
+				 * the mask vector and then each pixel's position is assessed with respect to the 
+				 * boundaries.
+				 *
+				 * Nov 27, 2019: Bug fix. The footprint polygon is not convex at high latitude, where
+				 * the flight path is almost horizontal in the image. So not necessarily only two 
+				 * boundaries to test against for a row of pixels. Back to the original idea of ray 
+				 * tracing, but luckily all pixels in the same row have the same y, so the same set of 
+				 * expected X on the boundaries is used, although the number of points in the set can
+				 * be more than 2. 
 				 */
-				found_vector = 1;
-					
-				/* Example: <eop:MaskFeature gml:id="detector_footprint-B8A-12-0">  */
-				pos = strstr(line, "-");
-				pos = strstr(pos+1, "-"); /* Skip band number since one band per gml file */
-				detid = atoi(pos+1);
-
-				/* Skip 5 lines and look for the expected characters*/
-				for (i = 0; i < 5; i++) 
-					fgets(line, sizeof(line), fgml);	
-				/* Line of vector */
-				fscanf(fgml, "%s", str);
-				fscanf(fgml, "%s", str);
-				if (strstr(str, "srsDimension=\"3\">") == NULL) {
-					sprintf(message, "Pattern \"srsDimension\" not found. %s", fname_gml);
-					Error(message);
-					return(1);
-				}
-
-				n = 0;
-				sscanf(str+strlen("srsDimension=\"3\">"), "%lf", &x[n]); /* First point */
-				fscanf(fgml, "%lf", &y[n]);
-				fscanf(fgml, "%lf", &z);
-				n++;
-				while (1) {
-					fscanf(fgml, "%s", str);
-					if (strstr(str, "</gml:posList>"))
-						break;
-					else {
-						/* str contains x */
-						if (n == xylen) {
-							xylen *= 2;
-							if ((x = realloc(x, xylen*sizeof(double))) == NULL || 
-							    (y = realloc(y, xylen*sizeof(double))) == NULL) {
-								sprintf(message, "Cannot open for read: %s", fname_gml);
-								Error(message);
-								return(1);
-							}
-						}
-
-						x[n] = atof(str);
-						fscanf(fgml, "%lf", &y[n]);
-						fscanf(fgml, "%lf", &z);
-						n++;
-					}
-				}
-
-				/* Rasterize by point in polygon test */
-				for (irow = 0; irow < s2detfoo->nrow; irow++) {
-  					int i, j;
-					int m = 0, im;
-					char in; 	/* pixel in polygon or not */	
-					double ex[100];	/* Expected x value on a polygon boundary for the given y. 
-							 * Predomimantly only two elements are needed in the array. Nov 27, 2019 */
-					py = s2detfoo->uly - (irow+0.5) * DETFOOPIXSZ;
-
-					/* Dec 19-20, 2018: Originally ESA masked the full extent of each detector's
-					 * footprint and as a result the footprint of two adjacent detectors overlaps 
-					 * although data from only one detector is retained in the image for the overlap. 
-					 * Later in extracting the angle data, HLS had evenly split the overlapping area.
-					 * Starting on Nov 10 (?), 2018, the ESA footprint mask only demarcates the pixels
-					 * that are preserved in the L1C data. As a result, the number of points in the mask
-					 * increased substantially to make the application of the function pnpoly impractical.
-					 *
-					 * However, the idea of function pnpoly (found from internet) still applies. For each 
-					 * row of pixels, the left and right boundaries of the footprint are calculated from 
-					 * the mask vector and then each pixel's position is assessed with respect to the 
-					 * boundaries.
-					 *
-					 * Nov 27, 2019: Bug fix. The footprint polygon is not convex at high latitude, where
-					 * the flight path is almost horizontal in the image. So not necessarily only two 
-					 * boundaries to test against for a row of pixels. Back to the original idea of ray
-					 * tracing, but luckily all pixels in the same row have the same y, so the same set of 
-					 * expected X on the boundaries is used, although the number of points in the set can
-					 * be more than 2. 
-					 */
   					for (i = 0, j = n-1; i < n; j = i++) {
-						/* Note that the initial condition of the loop considers the first and last
-						 * points in the vector in case the first point is not duplicated to be the
-						 * last point.
-						 */
+					/* Note that the initial condition of the loop considers the first and last
+					 * points in the vector in case the first point is not duplicated to be the
+					 * last point.
+					 */
     						if ( (y[i]>py) != (y[j]>py) ) {
-							/* Very clever comparison to find a non-zero-length interval in y that
-							 * encloses py; it does not matter which is greater, y[i] or y[j].
-							 * py can be equal to one of the end points.
-							 */
-	 						ex[m] = (x[j]-x[i]) * (py-y[i]) / (y[j]-y[i]) + x[i];
-							m++;
-
-							/* m can be greater than 2. V1.4 code breaks the loop at m == 2 */ 
-						}
-					}
-
-					/* No footprint on this row of pixels; right edge near the top on the tile.
-					 * A bug fixed during testing. Dec 20, 2018 */
-					if (m == 0)
-						continue;
-
-					for (icol = 0; icol < s2detfoo->ncol; icol++) {
-						in = 0; 	/* Not in the polygon*/
-						px = s2detfoo->ulx + (icol+0.5) * DETFOOPIXSZ;
-						k = irow * s2detfoo->ncol + icol;
-					
-						/* The pixel hasn't been flagged.
-						 * Nov 27, 2019: no footprint overlap any more. 
+						/* Very clever comparison to find a non-zero-length interval in y that
+						 * encloses py; it does not matter which is greater, y[i] or y[j].
+						 * py can be equal to one of the end points.
 						 */
-						if (s2detfoo->detid[ib][k] == DETIDFILL) {
-							for (im = 0; im < m; im++) {
-								if (px < ex[im])	/* borrowed from pnpoly.c. 11/27/19 */
-									in = !in;
-							}
+ 						ex[m] = (x[j]-x[i]) * (py-y[i]) / (y[j]-y[i]) + x[i];
+						m++;
 
-							if ( in ) 
-								s2detfoo->detid[ib][k] = detid;
-							
+						/* m can be greater than 2. V1.4 code breaks the loop at m == 2 */ 
+					}
+				}
+
+				/* No footprint on this row of pixels; right edge near the top on the tile.
+				 * A bug fixed during testing. Dec 20, 2018 */
+				if (m == 0)
+					continue;
+
+				for (icol = 0; icol < s2detfoo->ncol; icol++) {
+					in = 0; 	/* Not in the polygon*/
+					px = s2detfoo->ulx + (icol+0.5) * DETFOOPIXSZ;
+					k = irow * s2detfoo->ncol + icol;
+				
+					/* The pixel hasn't been flagged.
+					 * Nov 27, 2019: no footprint overlap any more. 
+					 */
+					if (s2detfoo->detid[k] == DETIDFILL) {
+						for (im = 0; im < m; im++) {
+							if (px < ex[im])	/* borrowed from pnpoly.c. 11/27/19 */
+								in = !in;
 						}
+
+						if ( in ) 
+							s2detfoo->detid[k] = detid;
+						
 					}
 				}
 			}
 		}
-
-		if (! found_vector) {
-			sprintf(message, "vector not found for band %s: %s", S2_SDS_NAME[ib], fname_gml);
-			Error(message);	
-			return(no_vector);
-		}
-
-		fclose(fgml);
 	}
+
+	if (! found_vector) {
+		sprintf(message, "Detector footprint vector not found for band %s: %s", S2_SDS_NAME[5], fname_gml);
+		Error(message);	
+		return(no_vector);
+	}
+
+	fclose(fgml);
+
 	return 0;
 }
 
@@ -284,49 +280,45 @@ void split_overlap(s2detfoo_t *s2detfoo)
 	int startcol, endcol;
 	int id_left, id_right, id_overlap;
 	int ic, mid, n;
-	int ib;
 	int OW = 50; 	/* An priori estimate of overlap width; not accurate for all detector pairs
 			 * and for all bands. Later if possible, a more suitable value will be found
 			 * from the overlap in the footprint image itself.  Added Dec 20, 2018 */
 
 
-	for (ib = 0; ib < S2NBAND; ib++) {
 
-		/* Try to find a more realistic value for OW from the full-length overlap in the interior 
-		 * of the first and last rows of the footprint image. Do an average. Still this value 
-		 * won't be perfect.  The attempt may fail if the footprint image is too small to contain a 
-		 * full-length overlap; use a prefixed OW in this case.
-		 */
-		int n = 0;
-		double ow = 0;
-		for (irow = 0;        ; irow = s2detfoo->nrow -1) {   /* The first and last rows */
-			startcol = endcol = -1;
-			for (icol = 0; icol < s2detfoo->ncol; icol++) {
-				k = irow * s2detfoo->ncol + icol;
+	/* Try to find a more realistic value for OW from the full-length overlap in the interior 
+	 * of the first and last rows of the footprint image. Do an average. Still this value 
+	 * won't be perfect.  The attempt may fail if the footprint image is too small to contain a 
+	 * full-length overlap; use a prefixed OW in this case.
+	 */
+	double ow = 0;
+	for (irow = 0;        ; irow = s2detfoo->nrow -1) {   /* The first and last rows */
+		startcol = endcol = -1;
+		for (icol = 0; icol < s2detfoo->ncol; icol++) {
+			k = irow * s2detfoo->ncol + icol;
 
  				/* A full-length overlap shouldn't start with column 0. */
-				if ( s2detfoo->detid[ib][k] > NDETECTOR && startcol == -1 && icol != 0 )
-					startcol = icol;
-					
+			if ( s2detfoo->detid[k] > NDETECTOR && startcol == -1 && icol != 0 )
+				startcol = icol;
+				
  				/* A full-length overlap shouldn't end with column ncol-1. */
-				if (s2detfoo->detid[ib][k] <= NDETECTOR && startcol != -1 && icol != s2detfoo->ncol - 1)
-					endcol = icol-1;
+			if (s2detfoo->detid[k] <= NDETECTOR && startcol != -1 && icol != s2detfoo->ncol - 1)
+				endcol = icol-1;
 
-				if (startcol != -1 && endcol != -1) {
-					n++;
-					ow = ow + ((endcol - startcol + 1) - ow)/n;
+			if (startcol != -1 && endcol != -1) {
+				n++;
+				ow = ow + ((endcol - startcol + 1) - ow)/n;
 
-					/* Initialize for the next overlap on this row. */
-					startcol = endcol = -1;
-				}
+				/* Initialize for the next overlap on this row. */
+				startcol = endcol = -1;
 			}
+		}
 
-			if (irow == s2detfoo->nrow -1) {
-				if (ow != 0) 
-					OW = ow;
+		if (irow == s2detfoo->nrow -1) {
+			if (ow != 0) 
+				OW = ow;
 
-				break;
-			}
+			break;
 		}
 
 
@@ -336,10 +328,10 @@ void split_overlap(s2detfoo_t *s2detfoo)
 			for (icol = 0; icol < s2detfoo->ncol; icol++) {
 				k = irow * s2detfoo->ncol + icol;
 
-				if (s2detfoo->detid[ib][k] > NDETECTOR) {  /* In overlap */
+				if (s2detfoo->detid[k] > NDETECTOR) {  /* In overlap */
 					if (startcol == -1) {
 						startcol = icol;
-						id_overlap = s2detfoo->detid[ib][k];
+						id_overlap = s2detfoo->detid[k];
 					}
 
 					/* Has reached the end of the line and still in overlap */
@@ -351,7 +343,7 @@ void split_overlap(s2detfoo_t *s2detfoo)
 				}
 
 				/* Overlap stopped in the preceding column */
-				if (s2detfoo->detid[ib][k] <= NDETECTOR && startcol != -1)
+				if (s2detfoo->detid[k] <= NDETECTOR && startcol != -1)
 					endcol = icol-1;
 
 
@@ -380,11 +372,11 @@ void split_overlap(s2detfoo_t *s2detfoo)
 
 					for (ic = startcol; ic < mid; ic++) {
 						n = irow * s2detfoo->ncol + ic;
-						s2detfoo->detid[ib][n] = id_left;
+						s2detfoo->detid[n] = id_left;
 					}
 					for (ic = mid; ic <= endcol; ic++) {
 						n = irow * s2detfoo->ncol + ic;
-						s2detfoo->detid[ib][n] = id_right;
+						s2detfoo->detid[n] = id_right;
 					}
 
 					/* Initialize for the next overlap on this row. */
@@ -401,7 +393,6 @@ void split_overlap(s2detfoo_t *s2detfoo)
  */
 int close_s2detfoo(s2detfoo_t *s2detfoo)
 {
-	int ib;
 	char message[MSGLEN];
 
 	if (s2detfoo->access_mode == DFACC_CREATE && s2detfoo->sd_id != FAIL) {
@@ -412,23 +403,19 @@ int close_s2detfoo(s2detfoo_t *s2detfoo)
 		start[1] = 0; edge[1] = s2detfoo->ncol;
 
 
-		for (ib = 0; ib < S2NBAND; ib++) {
-			if (SDwritedata(s2detfoo->sds_id_detid[ib], start, NULL, edge, s2detfoo->detid[ib]) == FAIL) {
-				Error("Error in SDwritedata");
-				return(ERR_CREATE);
-			}
-			SDendaccess(s2detfoo->sds_id_detid[ib]);
+		if (SDwritedata(s2detfoo->sds_id_detid, start, NULL, edge, s2detfoo->detid) == FAIL) {
+			Error("Error in SDwritedata");
+			return(ERR_CREATE);
 		}
+		SDendaccess(s2detfoo->sds_id_detid);
 		SDend(s2detfoo->sd_id);
 	}
 
 
 	/* free up memory */
-	for (ib = 0; ib < S2NBAND; ib++) {
-		if (s2detfoo->detid[ib] != NULL) {
-			free(s2detfoo->detid[ib]);
-			s2detfoo->detid[ib] = NULL;
-		}
+	if (s2detfoo->detid != NULL) {
+		free(s2detfoo->detid);
+		s2detfoo->detid = NULL;
 	}
 
 	return 0;
