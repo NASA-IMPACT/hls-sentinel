@@ -1,0 +1,24 @@
+name: build
+on:
+  push:
+    branches:
+      - '*'         # matches every branch that doesn't contain a '/'
+      - '*/*'       # matches every branch containing a single '/'
+      - '**'        # matches every branch
+      - '!master'   # excludes master
+      - '!dev'   # excludes master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Lint shell scripts
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@master
+
+      - name: Build image
+        run: docker build . --tag hls-sentinel
