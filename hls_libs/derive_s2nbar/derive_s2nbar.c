@@ -134,14 +134,14 @@ int main(int argc, char *argv[])
 			if (s2o.ref[ib][k] == ref_fillval)
 				continue;
 
-			if (s2ang.sz[k] == ANGFILL || s2ang.sa[k] == ANGFILL ||
-			    s2ang.vz[k] == ANGFILL || s2ang.va[k] == ANGFILL)
+			if (s2ang.ang[0][k] == ANGFILL || s2ang.ang[1][k] == ANGFILL ||
+			    s2ang.ang[2][k] == ANGFILL || s2ang.ang[3][k] == ANGFILL)
 				continue;
 
-			sz = s2ang.sz[k]/100.0;
-			sa = s2ang.sa[k]/100.0;
-			vz = s2ang.vz[k]/100.0;
-			va = s2ang.va[k]/100.0;
+			sz = s2ang.ang[0][k]/100.0;
+			sa = s2ang.ang[1][k]/100.0;
+			vz = s2ang.ang[2][k]/100.0;
+			va = s2ang.ang[3][k]/100.0;
 
 			n++;
                         msz = msz + (sz-msz)/n;
@@ -235,15 +235,18 @@ int main(int argc, char *argv[])
 				/* Bug fix, Sep 6, 2016. Angles for certain bands are not available for some grnaules
 				 * due to mistakes in the ESA XML.
 				 * Sep 10, 2016: a substitute band may not be able to find.
+				 *
+				 *  ang[0] is solar zenith, 1 is solar azimuth, 2 is view zenith, 3 is view azimuth
 				 */
-				if (s2ang.sz[k] == ANGFILL || s2ang.sa[k] == ANGFILL ||
-				    s2ang.vz[k] == ANGFILL || s2ang.va[k] == ANGFILL)
+
+				if (s2ang.ang[0][k] == ANGFILL || s2ang.ang[1][k] == ANGFILL ||
+				    s2ang.ang[2][k] == ANGFILL || s2ang.ang[3][k] == ANGFILL)
 					continue;
 
-				sz = s2ang.sz[k]/100.0;
-				sa = s2ang.sa[k]/100.0;
-				vz = s2ang.vz[k]/100.0;
-				va = s2ang.va[k]/100.0;
+				sz = s2ang.ang[0][k]/100.0;
+				sa = s2ang.ang[1][k]/100.0;
+				vz = s2ang.ang[2][k]/100.0;
+				va = s2ang.ang[3][k]/100.0;
 				ra = va - sa;
 
 				ratio = (coeff[specidx][0] + coeff[specidx][1] * rossthick_nbarsz + coeff[specidx][2] * lisparseR_nbarsz) / 

@@ -1,4 +1,5 @@
 #include "s2ang.h"
+#include "s2r.h"
 #include "error.h"
 #include "math.h"
 
@@ -13,13 +14,12 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 	int32 dimsizes[2];
 	int32 rank, data_type, n_attrs;
 	int32 start[2], edge[2];
+	int ib;
 
 	char message[MSGLEN];
 
-	s2ang->sz = NULL;
-	s2ang->sa = NULL;
-	s2ang->vz = NULL;
-	s2ang->va = NULL;
+	for (ib = 0; ib < NANG; ib++)
+		s2ang->ang[ib] = NULL;
 	s2ang->access_mode = access_mode;
 
 	/* For DFACC_READ, find the image dimension from band 1.
@@ -32,94 +32,82 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 			return(ERR_CREATE);
 		}
 
-		/* SZ */
-		strcpy(sdsname, SZ);
-		if ((sds_index = SDnametoindex(s2ang->sd_id, sdsname)) == FAIL) {
-			sprintf(message, "Didn't find the SDS %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		s2ang->sds_id_sz = SDselect(s2ang->sd_id, sds_index);
+		for (ib = 0; ib < NANG; ib++) {
+			if ((sds_index = SDnametoindex(s2ang->sd_id, ANG_SDS_NAME[ib])) == FAIL) {
+				sprintf(message, "Didn't find the SDS %s in %s", ANG_SDS_NAME[ib], s2ang->fname);
+				Error(message);
+				return(ERR_READ);
+			}
+			s2ang->sds_id[ib] = SDselect(s2ang->sd_id, sds_index);
+	
+			// Use sds_name, not ANG_SDS_NAME[ib].
+			//if (SDgetinfo(s2ang->sds_id[ib], ANG_SDS_NAME[ib], &rank, dimsizes, &data_type, &nattr) == FAIL) {
+			if (SDgetinfo(s2ang->sds_id[ib], sdsname, &rank, dimsizes, &data_type, &nattr) == FAIL) {
+				Error("Error in SDgetinfo");
+				return(ERR_READ);
+			}
+			s2ang->nrow = dimsizes[0];
+			s2ang->ncol = dimsizes[1];
 
-		if (SDgetinfo(s2ang->sds_id_sz, sdsname, &rank, dimsizes, &data_type, &nattr) == FAIL) {
-			Error("Error in SDgetinfo");
-			return(ERR_READ);
+			start[0] = 0; edge[0] = dimsizes[0];
+			start[1] = 0; edge[1] = dimsizes[1];
+			if ((s2ang->ang[ib] = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
+				Error("Cannot allocate memory");
+				exit(1);
+			}
+			if (SDreaddata(s2ang->sds_id[ib], start, NULL, edge, s2ang->ang[ib]) == FAIL) {
+				sprintf(message, "Error reading sds %s in %s", ANG_SDS_NAME[ib], s2ang->fname);
+				Error(message);
+				return(ERR_READ);
+			}
+			SDendaccess(s2ang->sds_id[ib]);
 		}
-		s2ang->nrow = dimsizes[0];
-		s2ang->ncol = dimsizes[1];
-		start[0] = 0; edge[0] = dimsizes[0];
-		start[1] = 0; edge[1] = dimsizes[1];
-		if ((s2ang->sz = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
+
+		/* A few map projection attribute */
+		/*ULX*/
+		strcpy(attr_name, ULX);
+		if ((attr_index = SDfindattr(s2ang->sd_id, attr_name)) == FAIL) {
+                	sprintf(message, "Attribute \"%s\" not found in %s. ", attr_name, s2ang->fname);
+                	Error(message);
 			exit(1);
-		}
-		if (SDreaddata(s2ang->sds_id_sz, start, NULL, edge, s2ang->sz) == FAIL) {
-			sprintf(message, "Error reading sds %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		SDendaccess(s2ang->sds_id_sz);
+        	}
+		SDattrinfo(s2ang->sd_id, attr_index, attr_name, &data_type, &count);
+                if (SDreadattr(s2ang->sd_id, attr_index, &s2ang->ulx) == FAIL) {
+                        sprintf(message, "Error read attribute \"%s\" in %s", attr_name, s2ang->fname);
+                        Error(message);
+                        return(-1);
+                }
 
-		/* SA */
-		strcpy(sdsname, SA);
-		if ((sds_index = SDnametoindex(s2ang->sd_id, sdsname)) == FAIL) {
-			sprintf(message, "Didn't find the SDS %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		s2ang->sds_id_sa = SDselect(s2ang->sd_id, sds_index);
-
-		if ((s2ang->sa = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
+		/*ULY*/
+		strcpy(attr_name, ULY);
+		if ((attr_index = SDfindattr(s2ang->sd_id, attr_name)) == FAIL) {
+                	sprintf(message, "Attribute \"%s\" not found in %s. ", attr_name, s2ang->fname);
+                	Error(message);
 			exit(1);
-		}
-		if (SDreaddata(s2ang->sds_id_sa, start, NULL, edge, s2ang->sa) == FAIL) {
-			sprintf(message, "Error reading sds %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		SDendaccess(s2ang->sds_id_sa);
+        	}
+		SDattrinfo(s2ang->sd_id, attr_index, attr_name, &data_type, &count);
+                if (SDreadattr(s2ang->sd_id, attr_index, &s2ang->uly) == FAIL) {
+                        sprintf(message, "Error read attribute \"%s\" in %s", attr_name, s2ang->fname);
+                        Error(message);
+                        return(-1);
+                }
 
-		/* View zenith and azimuth; same for all bands */
-		/* zenith */
-		strcpy(sdsname, VZ);
-		if ((sds_index = SDnametoindex(s2ang->sd_id, sdsname)) == FAIL) {
-			sprintf(message, "Didn't find the SDS %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		s2ang->sds_id_vz = SDselect(s2ang->sd_id, sds_index);
-
-		if ((s2ang->vz = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
+		/* ZONEHEM */
+		/*ULX*/
+		strcpy(attr_name, ZONEHEM);
+		if ((attr_index = SDfindattr(s2ang->sd_id, attr_name)) == FAIL) {
+                	sprintf(message, "Attribute \"%s\" not found in %s. ", attr_name, s2ang->fname);
+                	Error(message);
 			exit(1);
-		}
-		if (SDreaddata(s2ang->sds_id_vz, start, NULL, edge, s2ang->vz) == FAIL) {
-			sprintf(message, "Error reading sds %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		SDendaccess(s2ang->sds_id_vz);
+        	}
+		SDattrinfo(s2ang->sd_id, attr_index, attr_name, &data_type, &count);
+                if (SDreadattr(s2ang->sd_id, attr_index, s2ang->zonehem) == FAIL) {
+                        sprintf(message, "Error read attribute \"%s\" in %s", attr_name, s2ang->fname);
+                        Error(message);
+                        return(-1);
+                }
+                s2ang->zonehem[count] = '\0';
 
-		/* azimuth*/
-		strcpy(sdsname, VA);
-		if ((sds_index = SDnametoindex(s2ang->sd_id, sdsname)) == FAIL) {
-			sprintf(message, "Didn't find the SDS %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		s2ang->sds_id_va = SDselect(s2ang->sd_id, sds_index);
-
-		if ((s2ang->va = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
-			exit(1);
-		}
-		if (SDreaddata(s2ang->sds_id_va, start, NULL, edge, s2ang->va) == FAIL) {
-			sprintf(message, "Error reading sds %s in %s", sdsname, s2ang->fname);
-			Error(message);
-			return(ERR_READ);
-		}
-		SDendaccess(s2ang->sds_id_va);
 
 		SDend(s2ang->sd_id);
 	}
@@ -138,94 +126,33 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 			return(ERR_CREATE);
 		}
 
-		/* SZ */
-		strcpy(sdsname, SZ);
-		dimsizes[0] = s2ang->nrow;
-		dimsizes[1] = s2ang->ncol;
-
-		if ((s2ang->sz = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
-			exit(1);
-		}
-		if ((s2ang->sds_id_sz = SDcreate(s2ang->sd_id, sdsname, DFNT_UINT16, rank, dimsizes)) == FAIL) {
-			sprintf(message, "Cannot create SDS %s", sdsname);
-			Error(message);
-			return(ERR_CREATE);
-		}    
-		for (irow = 0; irow < s2ang->nrow; irow++) {
-			for (icol = 0; icol < s2ang->ncol; icol++) 
-				s2ang->sz[irow * s2ang->ncol + icol] = ANGFILL;
-		}
-		PutSDSDimInfo(s2ang->sds_id_sz, dimnames[0], 0);
-		PutSDSDimInfo(s2ang->sds_id_sz, dimnames[1], 1);
-		SDsetcompress(s2ang->sds_id_sz, comp_type, &c_info);	
-
-		/* SA */
-		strcpy(sdsname, SA);
-		dimsizes[0] = s2ang->nrow;
-		dimsizes[1] = s2ang->ncol;
-
-		if ((s2ang->sa = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
-			exit(1);
-		}
-		if ((s2ang->sds_id_sa = SDcreate(s2ang->sd_id, sdsname, DFNT_UINT16, rank, dimsizes)) == FAIL) {
-			sprintf(message, "Cannot create SDS %s", sdsname);
-			Error(message);
-			return(ERR_CREATE);
-		}    
-		for (irow = 0; irow < s2ang->nrow; irow++) {
-			for (icol = 0; icol < s2ang->ncol; icol++) 
-				s2ang->sa[irow * s2ang->ncol + icol] = ANGFILL;
-		}
-		PutSDSDimInfo(s2ang->sds_id_sa, dimnames[0], 0);
-		PutSDSDimInfo(s2ang->sds_id_sa, dimnames[1], 1);
-		SDsetcompress(s2ang->sds_id_sa, comp_type, &c_info);	
-
-
-		/* View Zenith */
-		strcpy(sdsname, VZ);
-		dimsizes[0] = s2ang->nrow;
-		dimsizes[1] = s2ang->ncol;
-
-		if ((s2ang->vz = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
-			exit(1);
-		}
-		if ((s2ang->sds_id_vz = SDcreate(s2ang->sd_id, sdsname, DFNT_UINT16, rank, dimsizes)) == FAIL) {
-			sprintf(message, "Cannot create SDS %s", sdsname);
-			Error(message);
-			return(ERR_CREATE);
-		}    
-		PutSDSDimInfo(s2ang->sds_id_vz, dimnames[0], 0);
-		PutSDSDimInfo(s2ang->sds_id_vz, dimnames[1], 1);
-		SDsetcompress(s2ang->sds_id_vz, comp_type, &c_info);	
-		for (irow = 0; irow < s2ang->nrow; irow++) {
-			for (icol = 0; icol < s2ang->ncol; icol++) 
-				s2ang->vz[irow * s2ang->ncol + icol] = ANGFILL;
+		for (ib = 0; ib < NANG; ib++) {
+			strcpy(sdsname, ANG_SDS_NAME[ib]);
+			dimsizes[0] = s2ang->nrow;
+			dimsizes[1] = s2ang->ncol;
+	
+			if ((s2ang->ang[ib] = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
+				Error("Cannot allocate memory");
+				exit(1);
+			}
+			if ((s2ang->sds_id[ib] = SDcreate(s2ang->sd_id, sdsname, DFNT_UINT16, rank, dimsizes)) == FAIL) {
+				sprintf(message, "Cannot create SDS %s", sdsname);
+				Error(message);
+				return(ERR_CREATE);
+			}    
+			for (irow = 0; irow < s2ang->nrow; irow++) {
+				for (icol = 0; icol < s2ang->ncol; icol++) 
+					s2ang->ang[ib][irow * s2ang->ncol + icol] = ANGFILL;
+			}
+			PutSDSDimInfo(s2ang->sds_id[ib], dimnames[0], 0);
+			PutSDSDimInfo(s2ang->sds_id[ib], dimnames[1], 1);
+			SDsetcompress(s2ang->sds_id[ib], comp_type, &c_info);	
 		}
 
-		/* VA */
-		strcpy(sdsname, VA);
-		dimsizes[0] = s2ang->nrow;
-		dimsizes[1] = s2ang->ncol;
-
-		if ((s2ang->va = (uint16*)calloc(dimsizes[0] * dimsizes[1], sizeof(uint16))) == NULL) {
-			Error("Cannot allocate memory");
-			exit(1);
-		}
-		if ((s2ang->sds_id_va = SDcreate(s2ang->sd_id, sdsname, DFNT_UINT16, rank, dimsizes)) == FAIL) {
-			sprintf(message, "Cannot create SDS %s", sdsname);
-			Error(message);
-			return(ERR_CREATE);
-		}    
-		PutSDSDimInfo(s2ang->sds_id_va, dimnames[0], 0);
-		PutSDSDimInfo(s2ang->sds_id_va, dimnames[1], 1);
-		SDsetcompress(s2ang->sds_id_va, comp_type, &c_info);	
-		for (irow = 0; irow < s2ang->nrow; irow++) {
-			for (icol = 0; icol < s2ang->ncol; icol++) 
-				s2ang->va[irow * s2ang->ncol + icol] = ANGFILL;
-		}
+		/* 9/23/2020 */
+		SDsetattr(s2ang->sd_id, ULX, DFNT_FLOAT64, 1, (VOIDP)&s2ang->ulx);
+		SDsetattr(s2ang->sd_id, ULY, DFNT_FLOAT64, 1, (VOIDP)&s2ang->uly);
+		SDsetattr(s2ang->sd_id, ZONEHEM, DFNT_CHAR8, strlen(s2ang->zonehem), (VOIDP)s2ang->zonehem);
 	}
 
 	return 0;
@@ -289,7 +216,7 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 				exit(1);
 			}
 
-			/* Solar zenith */
+			/*** Solar zenith ***/
 			fgets(line, sizeof(line), fxml); /* <COL_STEP unit="m">5000</COL_STEP> */
 			fgets(line, sizeof(line), fxml); /* <ROW_STEP unit="m">5000</ROW_STEP> */
 			fgets(line, sizeof(line), fxml); /* <Values_List> */
@@ -306,20 +233,20 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 					else 	
 						val = atof(str);
 
-					s2ang->sz[k] = val * 100;
+					s2ang->ang[0][k] = val * 100;
 				}
 			}
 
 
 			/* interp */
-			ret = interp_s2ang_bilinear(s2ang->sz, s2ang->nrow, s2ang->ncol);
+			ret = interp_s2ang_bilinear(s2ang->ang[0], s2ang->nrow, s2ang->ncol);
 			if (ret != 0) {
 				sprintf(message, "Error in interp_s2ang_bilinear for %s", fname_xml);
 				Error(message);
 				return(-1);
 			}
 
-			/* Solar azimuth*/
+			/*** Solar azimuth***/
 			fgets(line, sizeof(line), fxml);	/* There is a "\n" trailing "</VALUES>" unread by fscanf*/
 			fgets(line, sizeof(line), fxml);	/* </Values_List> */
 			fgets(line, sizeof(line), fxml);	/* </Zenith> */
@@ -345,12 +272,12 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 					else 	
 						val = atof(str);
 
-					s2ang->sa[k] = val * 100;
+					s2ang->ang[1][k] = val * 100;
 				}
 			}
 
 			/* interp */
-			ret = interp_s2ang_bilinear(s2ang->sa, s2ang->nrow, s2ang->ncol);
+			ret = interp_s2ang_bilinear(s2ang->ang[1], s2ang->nrow, s2ang->ncol);
 			if (ret != 0) {
 				sprintf(message, "Error in interp_s2ang_bilinear for %s", fname_xml);
 				Error(message);
@@ -374,7 +301,7 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 				exit(1);
 			}
 
-			/*************** Zenith ********************/
+			/*** View Zenith ***/
 			fgets(line, sizeof(line), fxml); /* <COL_STEP unit="m">5000</COL_STEP> */
 			fgets(line, sizeof(line), fxml); /* <ROW_STEP unit="m">5000</ROW_STEP> */
 			fgets(line, sizeof(line), fxml); /* <Values_List> */
@@ -434,7 +361,7 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 			fgets(line, sizeof(line), fxml);	/* There is a "\n" trailing "</VALUES>" */
 			fgets(line, sizeof(line), fxml);	/* </Values_List> */
 			fgets(line, sizeof(line), fxml);	/* </Zenith> */
-			if (bandid == 5 && detector_has_data) {
+			if (bandid == 5 && detector_has_data) {		/* Use the 2nd red-edge band */
 				/* interp */
 				ret = interp_s2ang_bilinear(tmpang, s2ang->nrow, s2ang->ncol);
 				if (ret != 0) {
@@ -447,14 +374,14 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 					for (icol = 0; icol < s2ang->ncol; icol++) {
 						k = irow * s2ang->ncol + icol;
 						if (detid == s2detfoo->detid[k])
-							s2ang->vz[k] = tmpang[k];
+							s2ang->ang[2][k] = tmpang[k];
 
 					}
 				}
 			}
 
 
-			/*************** Azimuth ********************/
+			/*** View Azimuth ***/
 			fgets(line, sizeof(line), fxml);	/* <Azimuth> */
 			if (strstr(line, "<Azimuth>") == NULL) {	/* Good that I checked */
 				sprintf(message, "Format is not as expected: %s", fname_xml);
@@ -518,7 +445,7 @@ int make_smooth_s2ang(s2ang_t *s2ang, s2detfoo_t *s2detfoo, char *fname_xml)
 					for (icol = 0; icol < s2ang->ncol; icol++) {
 						k = irow * s2ang->ncol + icol;
 						if (detid == s2detfoo->detid[k])
-							s2ang->va[k] = tmpang[k];
+							s2ang->ang[3][k] = tmpang[k];
 					}
 				}
 			}
@@ -762,6 +689,7 @@ int close_s2ang(s2ang_t *s2ang)
 {
 	char message[MSGLEN];
 	int ib;
+	int nsds = 4;
 
 	if (s2ang->access_mode == DFACC_CREATE && s2ang->sd_id != FAIL) {
 		char sdsname[500];     
@@ -771,38 +699,13 @@ int close_s2ang(s2ang_t *s2ang)
 		start[1] = 0; edge[1] = s2ang->ncol;
 
 
-		/* SZ */
-		strcpy(sdsname, SZ);
-		if (SDwritedata(s2ang->sds_id_sz, start, NULL, edge, s2ang->sz) == FAIL) {
-			Error("Error in SDwritedata");
-			return(ERR_CREATE);
+		for (ib = 0; ib < NANG; ib++) {
+			if (SDwritedata(s2ang->sds_id[ib], start, NULL, edge, s2ang->ang[ib]) == FAIL) {
+				Error("Error in SDwritedata");
+				return(ERR_CREATE);
+			}
+			SDendaccess(s2ang->sds_id[ib]);
 		}
-		SDendaccess(s2ang->sds_id_sz);
-
-		/* SA */
-		strcpy(sdsname, SA);
-		if (SDwritedata(s2ang->sds_id_sa, start, NULL, edge, s2ang->sa) == FAIL) {
-			Error("Error in SDwritedata");
-			return(ERR_CREATE);
-		}
-		SDendaccess(s2ang->sds_id_sa);
-
-		/* VZ */
-		strcpy(sdsname, VZ);
-		if (SDwritedata(s2ang->sds_id_vz, start, NULL, edge, s2ang->vz) == FAIL) {
-			Error("Error in SDwritedata");
-			return(ERR_CREATE);
-		}
-		SDendaccess(s2ang->sds_id_vz);
-
-		/* VA */
-		strcpy(sdsname, VA);
-		if (SDwritedata(s2ang->sds_id_va, start, NULL, edge, s2ang->va) == FAIL) {
-			Error("Error in SDwritedata");
-			return(ERR_CREATE);
-		}
-		SDendaccess(s2ang->sds_id_vz);
-
 
 		SDend(s2ang->sd_id);
 		s2ang->sd_id = FAIL;
@@ -810,26 +713,12 @@ int close_s2ang(s2ang_t *s2ang)
 
 
 	/* free up memory */
-	if (s2ang->sz != NULL) {
-		free(s2ang->sz);
-		s2ang->sz = NULL;
+	for (ib = 0; ib < NANG; ib++) {
+		if (s2ang->ang[ib] != NULL) {
+			free(s2ang->ang[ib]);
+			s2ang->ang[ib] = NULL;
+		}
 	}
-
-	if (s2ang->sa != NULL) {
-		free(s2ang->sa);
-		s2ang->sa = NULL;
-	}
-
-	if (s2ang->vz != NULL) {
-		free(s2ang->vz);
-		s2ang->vz = NULL;
-	}
-
-	if (s2ang->va != NULL) {
-		free(s2ang->va);
-		s2ang->va = NULL;
-	}
-
 
 	return 0;
 }
