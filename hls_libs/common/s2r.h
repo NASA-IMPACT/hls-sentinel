@@ -66,6 +66,7 @@ static char *VermoteS2sdsname[] = {
 #define SPCOVER  "spatial_coverage"
 #define CLCOVER  "cloud_coverage"
 #define ACCODE   "ACCODE"
+#define ZONEHEM "UTM_ZONE_HEMISPHERE"	/* Sep 23, 2020: Added for s2ang.h */
 
 #define ACMASK_NAME "ACmask"
 #define FMASK_NAME "Fmask"

@@ -197,142 +197,109 @@ int S10_PutSpaceDefHDF(s2r_t *tile, sds_info_t sds[], int nsds)
           return(1);
 	}
 
-		/*  GCTP projection parameters*/
-		/* Not used in UTM. Do not write. Oct 19, 2016. Ju */
-//		sprintf(cbuf, "\t\tProjParams=(");
-//		if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//			Error("Error in AppendMeta() for (grid projection parameters start)");
-//			return(1);
-//		}
-//	
-//		for (ip = 0; ip < NPROJ_PARAM_HDFEOS; ip++) {
-//			f_fractional = modf(projParameters[ip], &f_integral);
-//			if (fabs(f_fractional) == 0) {
-//				if (ip < (NPROJ_PARAM_HDFEOS - 1))
-//					sprintf(cbuf, "%.0lf,", projParameters[ip]);
-//				else
-//					sprintf(cbuf, "%.0lf)", projParameters[ip]);
-//			}
-//			else {
-//				if (ip < (NPROJ_PARAM_HDFEOS - 1))  /* The LEDAPS is a potential bug: ip < (NPROJ_PARAM_HDFEOS + 1)   */
-//					sprintf(cbuf, "%.6lf,)", projParameters[ip]);
-//				else
-//					sprintf(cbuf, "%.6lf)", projParameters[ip]);
-//			}
-//			if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//				Error("Error in AppendMeta() for (individual grid projection parameter)");
-//				return(1);
-//			}
-//		}
-//		sprintf(cbuf, "\n");  
-//	
-//		if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//			Error("Error in AppendMeta() for (grid projection parameter end)");
-//			return(1);
-//		}
 
-		/* Put SDS group */
-	
-		/* All the SDS:
-			"B01", "B02", "B03", "B04", "B05", "B06", 
-		       	"B07", "B08", "B8A", "B09", "B10", "B11", "B12", 
-			"QA"
-		*/
-		for (isds = 0; isds < nsds; isds++)
+	/* Put SDS group */
+
+	/* All the SDS:
+		"B01", "B02", "B03", "B04", "B05", "B06", 
+	       	"B07", "B08", "B8A", "B09", "B10", "B11", "B12", 
+		"ACmask", "Fmask"
+	*/
+	for (isds = 0; isds < nsds; isds++)
                 {
-		  if ( isds == 1 || isds == 2 || isds == 3 || isds == 7 || isds == 13)
+	  if ( isds == 1 || isds == 2 || isds == 3 || isds == 7 || isds == 13)
                   {
-	            xdimsize = imgdim[0];
+            xdimsize = imgdim[0];
                     ydimsize = imgdim[0];
-	   	    pixsz = pixsize[0]; 
+   	    pixsz = pixsize[0]; 
                   }
-		  if ( isds == 4 || isds == 5 || isds == 6 || isds == 8 || isds == 11 || isds == 12)
+	  if ( isds == 4 || isds == 5 || isds == 6 || isds == 8 || isds == 11 || isds == 12)
                   {
-	            xdimsize = imgdim[1];
+            xdimsize = imgdim[1];
                     ydimsize = imgdim[1];
-		    pixsz = pixsize[1]; 
+	    pixsz = pixsize[1]; 
                   }
-		  if ( isds == 0 || isds == 9 || isds == 10)
+	  if ( isds == 0 || isds == 9 || isds == 10)
                   {
-	            xdimsize = imgdim[2];
+            xdimsize = imgdim[2];
                     ydimsize = imgdim[2];
-		    pixsz = pixsize[2]; 
+	    pixsz = pixsize[2]; 
                   }
 
  		  datafield++;
 
-		  sprintf(cbuf,
-		    "\t\t\tXDim=%d\n"
-		    "\t\t\tYDim=%d\n"
-		    "\t\t\tPixelSize=(%.1lf,%.1lf)\n",
-		    xdimsize, ydimsize,
-		    pixsz, pixsz);
+	  sprintf(cbuf,
+	    "\t\t\tXDim=%d\n"
+	    "\t\t\tYDim=%d\n"
+	    "\t\t\tPixelSize=(%.1lf,%.1lf)\n",
+	    xdimsize, ydimsize,
+	    pixsz, pixsz);
 
-		  if (!AppendMeta(struct_meta, &ic, cbuf)) 
+	  if (!AppendMeta(struct_meta, &ic, cbuf)) 
                   {
-			Error("Error in AppendMeta() for (grid information start)");
-			return(1);
-		  }
+		Error("Error in AppendMeta() for (grid information start)");
+		return(1);
+	  }
 
                   sprintf(cbuf,
-		    "\t\tUpperLeftPointMtrs=(%.6lf,%.6lf)\n"
-		    "\t\tLowerRightMtrs=(%.6lf,%.6lf)\n"
-		    "\t\tProjection=%s\n",
-		    upleftpt[0],   upleftpt[1],
-		    lowrightpt[0], lowrightpt[1],
-		    cproj);
+	    "\t\tUpperLeftPointMtrs=(%.6lf,%.6lf)\n"
+	    "\t\tLowerRightMtrs=(%.6lf,%.6lf)\n"
+	    "\t\tProjection=%s\n",
+	    upleftpt[0],   upleftpt[1],
+	    lowrightpt[0], lowrightpt[1],
+	    cproj);
 
                   if (!AppendMeta(struct_meta, &ic, cbuf))
                   {
-	            Error("Error in AppendMeta() for (grid information start)");
-		    return(1);
-	          }
+            Error("Error in AppendMeta() for (grid information start)");
+	    return(1);
+          }
 
-	          sprintf(cbuf,
-		    "\t\tZoneCode=%d\n"
-		    "\t\tSphereCode=%d\n"
-		    "\t\tDatum=%s\n"
-		    "\t\tGridOrigin=HDFE_GD_UL\n",
-		    sds[0].zonecode,			// Same for all SDS
-		    sphereCode,
-		    datum);
+          sprintf(cbuf,
+	    "\t\tZoneCode=%d\n"
+	    "\t\tSphereCode=%d\n"
+	    "\t\tDatum=%s\n"
+	    "\t\tGridOrigin=HDFE_GD_UL\n",
+	    sds[0].zonecode,			// Same for all SDS
+	    sphereCode,
+	    datum);
                   if (!AppendMeta(struct_meta, &ic, cbuf))
                   {
                     Error("Error in AppendMeta() for (grid information end)");
-		    return(1);
-	          }
+	    return(1);
+          }
 
-		  sprintf(cbuf,
-		    "\t\t\tOBJECT=DataField_%d\n"
+	  sprintf(cbuf,
+	    "\t\t\tOBJECT=DataField_%d\n"
         	    "\t\t\t\tDataFieldName=\"%s\"\n"
-	            "\t\t\t\tDataType=%s\n"
-		    "\t\t\t\tDimList=(\"%s\",\"%s\")\n"
-		    "\t\t\tEND_OBJECT=DataField_%d\n",
-		  datafield, sds[isds].name, sds[isds].data_type_name, sds[isds].dimname[0], sds[isds].dimname[1], datafield);
-		  if (!AppendMeta(struct_meta, &ic, cbuf))
+            "\t\t\t\tDataType=%s\n"
+	    "\t\t\t\tDimList=(\"%s\",\"%s\")\n"
+	    "\t\t\tEND_OBJECT=DataField_%d\n",
+	  datafield, sds[isds].name, sds[isds].data_type_name, sds[isds].dimname[0], sds[isds].dimname[1], datafield);
+	  if (!AppendMeta(struct_meta, &ic, cbuf))
                   {
-		    Error("Error in AppendMeta() for (SDS group)");
-		    return(1);
-		  }
-	        }
-	
-		sprintf(cbuf,
-		    "\t\tEND_GROUP=DataField\n"
-		    "\t\tGROUP=MergedFields\n"
-		    "\t\tEND_GROUP=MergedFields\n");
-	
-		if (!AppendMeta(struct_meta, &ic, cbuf)) {
-		    	Error("Error in AppendMeta() for (SDS group end)");
-			return(1);
-		}
+	    Error("Error in AppendMeta() for (SDS group)");
+	    return(1);
+	  }
+        }
 
-		/* Put trailer */
-		sprintf(cbuf,
-	    		"\tEND_GROUP=GRID\n");
-		if (!AppendMeta(struct_meta, &ic, cbuf)) {
-	    		Error("Error in AppendMeta() for (tail)");
-			return(1);
-		}
+	sprintf(cbuf,
+	    "\t\tEND_GROUP=DataField\n"
+	    "\t\tGROUP=MergedFields\n"
+	    "\t\tEND_GROUP=MergedFields\n");
+
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+	    	Error("Error in AppendMeta() for (SDS group end)");
+		return(1);
+	}
+
+	/* Put trailer */
+	sprintf(cbuf,
+    		"\tEND_GROUP=GRID\n");
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+    		Error("Error in AppendMeta() for (tail)");
+		return(1);
+	}
 
 	sprintf(cbuf,
 	    "END_GROUP=GridStructure\n"
@@ -532,7 +499,7 @@ int set_S30_sds_info(sds_info_t *all_sds,  int nsds,  s2at30m_t *s2r)
 	strcpy(all_sds[nsds-2].dimname[0], dimnames[0]);
 	strcpy(all_sds[nsds-2].dimname[1], dimnames[1]);
 
-	/* ACmask */
+	/* Fmask */
 	strcpy(all_sds[nsds-1].name,  FMASK_NAME);
 	strcpy(all_sds[nsds-1].data_type_name, "DFNT_UINT8");
 	all_sds[nsds-1].data_type = DFNT_UINT8;
@@ -631,39 +598,6 @@ int S30_PutSpaceDefHDF(s2at30m_t *tile, sds_info_t sds[], int nsds)
 		return(1);
 	}
 
-	/*  GCTP projection parameters*/
-	/* Not used in UTM. Do not write. Oct 19, 2016. Ju */
-//	sprintf(cbuf, "\t\tProjParams=(");
-//	if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//		Error("Error in AppendMeta() for (grid projection parameters start)");
-//		return(1);
-//	}
-//
-//	for (ip = 0; ip < NPROJ_PARAM_HDFEOS; ip++) {
-//		f_fractional = modf(projParameters[ip], &f_integral);
-//		if (fabs(f_fractional) == 0) {
-//			if (ip < (NPROJ_PARAM_HDFEOS - 1))
-//				sprintf(cbuf, "%.0lf,", projParameters[ip]);
-//			else
-//				sprintf(cbuf, "%.0lf)", projParameters[ip]);
-//		}
-//		else {
-//			if (ip < (NPROJ_PARAM_HDFEOS - 1))  /* The LEDAPS is a potential bug: ip < (NPROJ_PARAM_HDFEOS + 1)   */
-//				sprintf(cbuf, "%.6lf,)", projParameters[ip]);
-//			else
-//				sprintf(cbuf, "%.6lf)", projParameters[ip]);
-//		}
-//		if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//			Error("Error in AppendMeta() for (individual grid projection parameter)");
-//			return(1);
-//		}
-//	}
-//	sprintf(cbuf, "\n");  
-//
-//	if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//		Error("Error in AppendMeta() for (grid projection parameter end)");
-//		return(1);
-//	}
 
 	sprintf(cbuf,
 	    "\t\tZoneCode=%d\n"
@@ -936,7 +870,7 @@ int set_L30_sds_info(sds_info_t *all_sds,  int nsds,  lsat_t *lsat)
 
 	/* thermal bands */
 	for (iband = 0; iband < L8NTB; iband++) {
-		strcpy(all_sds[nb].name,  L8_THM_SDS_NAME[iband]);
+		strcpy(all_sds[nb].name,  L8_THM_SDS_NAME[1][iband]);
 		strcpy(all_sds[nb].data_type_name, "DFNT_INT16");
 		all_sds[nb].data_type = DFNT_INT16;
 		strcpy(all_sds[nb].dimname[0], dimnames[0]);
@@ -1058,39 +992,6 @@ int L30_PutSpaceDefHDF(lsat_t *tile, sds_info_t sds[], int nsds)
 		return(1);
 	}
 
-	/*  GCTP projection parameters*/
-	/* Not used in UTM. Do not write. Oct 19, 2016. Ju */
-//	sprintf(cbuf, "\t\tProjParams=(");
-//	if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//		Error("Error in AppendMeta() for (grid projection parameters start)");
-//		return(1);
-//	}
-//
-//	for (ip = 0; ip < NPROJ_PARAM_HDFEOS; ip++) {
-//		f_fractional = modf(projParameters[ip], &f_integral);
-//		if (fabs(f_fractional) == 0) {
-//			if (ip < (NPROJ_PARAM_HDFEOS - 1))
-//				sprintf(cbuf, "%.0lf,", projParameters[ip]);
-//			else
-//				sprintf(cbuf, "%.0lf)", projParameters[ip]);
-//		}
-//		else {
-//			if (ip < (NPROJ_PARAM_HDFEOS - 1))  /* The LEDAPS is a potential bug: ip < (NPROJ_PARAM_HDFEOS + 1)   */
-//				sprintf(cbuf, "%.6lf,)", projParameters[ip]);
-//			else
-//				sprintf(cbuf, "%.6lf)", projParameters[ip]);
-//		}
-//		if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//			Error("Error in AppendMeta() for (individual grid projection parameter)");
-//			return(1);
-//		}
-//	}
-//	sprintf(cbuf, "\n");  
-//
-//	if (!AppendMeta(struct_meta, &ic, cbuf)) {
-//		Error("Error in AppendMeta() for (grid projection parameter end)");
-//		return(1);
-//	}
 
 	sprintf(cbuf,
 	    "\t\tZoneCode=%d\n"
@@ -1130,6 +1031,356 @@ int L30_PutSpaceDefHDF(lsat_t *tile, sds_info_t sds[], int nsds)
 
 	/* All the SDS including the 2 masks
 	*/
+	datafield = 0;
+	for (isds = 0; isds < nsds; isds++) {
+		datafield++;
+		sprintf(cbuf,
+			"\t\t\tOBJECT=DataField_%d\n"
+			"\t\t\t\tDataFieldName=\"%s\"\n"
+			"\t\t\t\tDataType=%s\n"
+			"\t\t\t\tDimList=(\"%s\",\"%s\")\n"
+			"\t\t\tEND_OBJECT=DataField_%d\n",
+			datafield, sds[isds].name, sds[isds].data_type_name, sds[isds].dimname[0], sds[isds].dimname[1], datafield);
+		if (!AppendMeta(struct_meta, &ic, cbuf)) {
+			Error("Error in AppendMeta() for (SDS group)");
+			return(1);
+		}
+
+	}
+
+	sprintf(cbuf,
+	    "\t\tEND_GROUP=DataField\n"
+	    "\t\tGROUP=MergedFields\n"
+	    "\t\tEND_GROUP=MergedFields\n");
+
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+	    	Error("Error in AppendMeta() for (SDS group end)");
+		return(1);
+	}
+
+	/* Put trailer */
+	sprintf(cbuf,
+    		"\tEND_GROUP=GRID_1\n");
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+    		Error("Error in AppendMeta() for (tail)");
+		return(1);
+	}
+
+	sprintf(cbuf,
+	    "END_GROUP=GridStructure\n"
+	    "GROUP=PointStructure\n"
+	    "END_GROUP=PointStructure\n"
+	    "END\n");
+
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+	    	Error("Error in AppendMeta() for (tail)");
+		return(1);
+	}
+
+
+	/* Write the StructMetadata attribute to the HDF file.  
+	 * Other global attributes have been set when the HDF is opened. */
+	/* DFACC_RDWR is for update */
+	if ((sd_id = SDstart(tile->fname, DFACC_RDWR)) == FAIL) {
+		sprintf(message, "Cannot open %s for DFACC_RDWR", tile->fname);
+		Error(message);
+	} 
+	
+	if (SDsetattr(sd_id, SPACE_STRUCT_METADATA, DFNT_CHAR8, strlen(struct_meta), (VOIDP)struct_meta) == FAIL) {
+		Error("Error write global attributes");
+		return(1);
+	}
+	if (SDend(sd_id) == FAIL) {
+	    	sprintf(message, "Error in SDend() for %s", tile->fname);
+	    	Error(message);
+		return(1);
+	}
+
+	/* Setup the HDF Vgroup */
+	if ((hdf_id = Hopen(tile->fname, DFACC_RDWR, 0)) == FAIL) {
+		sprintf(message, "Error in Hopen () for %s", tile->fname);
+	    	Error(message);
+		return(1);
+	}
+
+	/* Start the Vgroup access */
+	if (Vstart(hdf_id) == FAIL) {
+	    	sprintf(message, "Error in Vstart () for %s", tile->fname);
+	    	Error(message);
+		return(1);
+	}
+
+	/* Create Root Vgroup for Grid */
+	vgroup_id[0] = Vattach(hdf_id, -1, "w");
+	if (vgroup_id[0] == FAIL) {
+		Error("Error in getting Grid Vgroup ID (Vattach)");
+		return(1);
+	}
+
+	if (Vsetname(vgroup_id[0], grid_name) == FAIL) {
+		Error("Error in setting Grid Vgroup name (Vsetname)");
+		return(1);
+	}
+
+	if (Vsetclass(vgroup_id[0], "GRID") == FAIL) {
+		Error("Error in setting Grid Vgroup class (Vsetclass)");
+		return(1);
+	}
+
+	/* Create Data Fields Vgroup */
+	vgroup_id[1] = Vattach(hdf_id, -1, "w");
+	if (vgroup_id[1] == FAIL) {
+		Error("Error in getting Data Fields Vgroup ID (Vattach)");
+		return(1);
+	}
+	if (Vsetname(vgroup_id[1], "Data Fields") == FAIL) {
+		Error("Error setting Data Fields Vgroup name (Vsetname)");
+		return(1);
+	}
+	if (Vsetclass(vgroup_id[1], "GRID Vgroup") == FAIL) {
+		Error("Error in setting Data Fields Vgroup class (Vsetclass)");
+		return(1);
+	}
+	if (Vinsert(vgroup_id[0], vgroup_id[1]) == FAIL) {
+		Error("Error in inserting Data Fields Vgroup (Vinsert)");
+		return(1);
+	}
+
+	/* Create Attributes Vgroup */
+	vgroup_id[2] = Vattach(hdf_id, -1, "w");
+	if (vgroup_id[2] == FAIL) {
+		Error("Error in getting Attributes Vgroup ID (Vattach)");
+		return(1);
+	}
+	if (Vsetname(vgroup_id[2], "Grid Attributes") == FAIL) {
+		Error("Error in setting Attributes Vgroup name (Vsetname)");
+		return(1);
+	}
+	if (Vsetclass(vgroup_id[2], "GRID Vgroup") == FAIL) { 
+	    	Error("Error in setting Attributes Vgroup class (Vsetclass)");
+		return(1);
+	}
+	if (Vinsert(vgroup_id[0], vgroup_id[2]) == FAIL) {
+		Error("Error in inserting Attributes Vgroup (Vinsert)");
+		return(1);
+	}
+
+	/* Attach SDSs to Data Fields Vgroup */
+	sd_id = SDstart(tile->fname, DFACC_RDWR);
+	if (sd_id == FAIL) {
+	    	Error("Error in opening output file for DFACC_RDWR(2)");
+		return(1);
+	}
+	for (isds = 0; isds < nsds; isds++) {
+		sds_index = SDnametoindex(sd_id, sds[isds].name);
+		if (sds_index == FAIL) {
+			sprintf(message, "Error in getting SDS index (SDnametoindex) for %s", sds[isds].name); 
+			Error(message);
+			return(1);
+		}
+		sds_id = SDselect(sd_id, sds_index);
+		if (sds_id == FAIL) {
+			Error("Error in getting SDS ID (SDselect)");
+			return(1);
+		}
+		if (Vaddtagref(vgroup_id[1], DFTAG_NDG, SDidtoref(sds_id)) == FAIL) {
+			Error("Error in adding reference tag to SDS (Vaddtagref)");
+			return(1);
+		}
+		if (SDendaccess(sds_id) == FAIL) {
+			Error("Error in SDendaccess");
+			return(1);
+		}
+	}
+	if (SDend(sd_id) == FAIL) {
+	    	Error("Error in SDend");
+		return(1);
+	}
+	    
+
+	/* Detach Vgroups */
+	if (Vdetach(vgroup_id[0]) == FAIL) {
+	    	Error("Error in detaching from Grid Vgroup (Vdetach)");
+		return(1);
+	}
+	if (Vdetach(vgroup_id[1]) == FAIL) {
+		Error("Error in detaching from Data Fields Vgroup (Vdetach)");
+		return(1);
+	}
+	if (Vdetach(vgroup_id[2]) == FAIL) {
+	    	Error("Error in detaching from Attributes Vgroup (Vdetach)");
+		return(1);
+	}
+
+	/* Close access */
+	if (Vend(hdf_id) == FAIL) { 
+	    	Error("Error in end Vgroup access (Vend)");
+		return(1);
+	}
+	if (Hclose(hdf_id) == FAIL) {
+	    	Error("Error in end HDF access (Hclose)");
+		return(1);
+	}
+
+	return(0);
+}
+
+int set_S2ang_sds_info(sds_info_t *all_sds,  int nsds,  s2ang_t *s2ang)
+{
+	int iband;
+	char message[MSGLEN];
+	int NBAND = 4;
+
+	char *dimnames[2] =  {"YDim_Grid", "XDim_Grid"};
+
+	if (nsds != NBAND) {
+		sprintf(message, "Number of angle bands must be %d", NBAND);
+		Error(message);
+		return(1);
+	}
+
+	for (iband = 0; iband < NBAND; iband++) {
+		strcpy(all_sds[iband].name,  ANG_SDS_NAME[iband]);
+		strcpy(all_sds[iband].data_type_name, "DFNT_UINT16");
+		all_sds[iband].data_type = DFNT_UINT16;
+		strcpy(all_sds[iband].dimname[0], dimnames[0]);
+		strcpy(all_sds[iband].dimname[1], dimnames[1]);
+
+		all_sds[iband].ulx = s2ang->ulx;
+		all_sds[iband].uly = s2ang->uly;
+		all_sds[iband].nrow = s2ang->nrow;
+		all_sds[iband].ncol = s2ang->ncol;
+		all_sds[iband].pixsz = ANGPIXSZ; 
+		all_sds[iband].zonecode =  atoi(s2ang->zonehem);
+	}
+
+	return(0);
+}
+
+int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
+{
+	int32 sd_id;
+	char struct_meta[MYHDF_MAX_NATTR_VAL];      /*Make sure it is long enough*/
+	char cbuf[MYHDF_MAX_NATTR_VAL];
+	char *hdfeos_version = "HDFEOS_V2.4";
+	int ip, ic;
+	int32 hdf_id;
+	int32 vgroup_id[3];
+	int32 sds_index, sds_id;
+	char *grid_name = "Grid"; /* A silly name */
+	char message[MSGLEN];
+
+	char status = 0;
+	int32 xdimsize;
+	int32 ydimsize;
+
+	int k;
+	int32 rank = 2;
+	int32 dim_sizes[2];
+	int32 projCode = 1;                         // UTM, never use?????????????????????????
+	int32 sphereCode=12;                        //WGS 84
+	char  datum[] = "WGS84";		     // 
+	int32 zoneCode = -1;                        //For UTM only. 
+	float64 projParameters[NPROJ_PARAM_HDFEOS];
+	char cproj[] = "GCTP_UTM";
+	int datafield;	/* Does data field ID reset for each GRID, or it is cumulative? Oct 19, 2016. */
+	double pixsz;
+
+	float64 upleftpt[2], lowrightpt[2];
+	float64 f_integral, f_fractional;
+	int isds;
+
+	for (k = 0; k < NPROJ_PARAM_HDFEOS; k++)
+		projParameters[k] = 0.0;
+
+	/*  Start to generate the character string for the global attribute:
+	    #define SPACE_STRUCT_METADATA ("StructMetadata.0")
+	*/
+
+	ic = 0;
+	sprintf(cbuf,
+	    "GROUP=SwathStructure\n"
+	    "END_GROUP=SwathStructure\n"
+	    "GROUP=GridStructure\n");
+
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+		Error("Error in AppendMeta() for (head)");
+		return(1);
+	}
+
+	sprintf(cbuf,
+    	"\tGROUP=GRID_1\n");
+
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+		Error("Error in AppendMeta() for (head)");
+		return(1);
+	}
+
+	/* Put Grid information.Same for all SDS */
+	xdimsize = sds[0].ncol;
+	ydimsize = sds[0].nrow;
+	pixsz = sds[0].pixsz;
+	upleftpt[0] = sds[0].ulx; /* Same for all SDS */
+	upleftpt[1] = sds[0].uly;
+	lowrightpt[0] = upleftpt[0] + sds[0].ncol * sds[0].pixsz;
+	lowrightpt[1] = upleftpt[1] - sds[0].nrow * sds[0].pixsz;
+
+	sprintf(cbuf,
+	    "\t\tGridName=\"%s\"\n"
+	    "\t\tXDim=%d\n"
+	    "\t\tYDim=%d\n"
+	    "\t\tPixelSize=(%.1lf,%.1lf)\n"
+	    "\t\tUpperLeftPointMtrs=(%.6lf,%.6lf)\n"
+	    "\t\tLowerRightMtrs=(%.6lf,%.6lf)\n"
+	    "\t\tProjection=%s\n",
+	    grid_name,
+	    xdimsize, ydimsize,
+	    pixsz, pixsz,
+	    upleftpt[0],   upleftpt[1],
+	    lowrightpt[0], lowrightpt[1],
+	    cproj);
+
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+		Error("Error in AppendMeta() for (grid information start)");
+		return(1);
+	}
+
+	sprintf(cbuf,
+	    "\t\tZoneCode=%d\n"
+	    "\t\tSphereCode=%d\n"
+	    "\t\tDatum=%s\n"
+	    "\t\tGridOrigin=HDFE_GD_UL\n",
+	    sds[0].zonecode,			/* Same for all SDS */
+	    sphereCode,
+	    datum);
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+		Error("Error in AppendMeta() for (grid information end)");
+		return(1);
+	}
+
+	/* Put SDS group */
+	sprintf(cbuf,
+	    "\t\tGROUP=Dimension\n"
+                        "\t\t\tOBJECT=Dimension_1\n"
+                                "\t\t\t\tDimensionName=\"YDim_Grid\"\n"
+                                "\t\t\t\tSize=%d\n"
+                        "\t\t\tEND_OBJECT=Dimension_1\n"
+                        "\t\t\tOBJECT=Dimension_2\n"
+                                "\t\t\t\tDimensionName=\"XDim_Grid\"\n"
+                                "\t\t\t\tSize=%d\n"
+                        "\t\t\tEND_OBJECT=Dimension_2\n"
+	    "\t\tEND_GROUP=Dimension\n"
+            "\t\tGROUP=DimensionMap\n"
+            "\t\tEND_GROUP=DimensionMap\n"
+            "\t\tGROUP=IndexDimensionMap\n"
+            "\t\tEND_GROUP=IndexDimensionMap\n"
+	    "\t\tGROUP=DataField\n", ydimsize, xdimsize);
+
+	if (!AppendMeta(struct_meta, &ic, cbuf)) {
+		Error("Error in AppendMeta() for (SDS group start)");
+		return(1);
+	}
+
 	datafield = 0;
 	for (isds = 0; isds < nsds; isds++) {
 		datafield++;

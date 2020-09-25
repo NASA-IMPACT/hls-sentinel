@@ -23,8 +23,8 @@ int read_s2mapinfo(char *fname_xml, s2mapinfo_t *mapinfo)
 			pos = strstr(line, "zone");
 			pos2 = strstr(pos, "<");
 			len = pos2-(pos+5);
-			strncpy(mapinfo->zonestr, pos+5, len);
-			mapinfo->zonestr[len] = '\0';
+			strncpy(mapinfo->zonehem, pos+5, len);
+			mapinfo->zonehem[len] = '\0';
 		}
 		else if (strstr(line, "<Size resolution=\"10\">")) {
 			/* nrows */
@@ -50,6 +50,12 @@ int read_s2mapinfo(char *fname_xml, s2mapinfo_t *mapinfo)
 			fgets(line, sizeof(line), fxml);
 			pos = strstr(line, ">"); 
 			mapinfo->uly = atof(pos+1);
+			/* 9/24/2020: A bug that cost me half a day . Do not change to GCTP convention yet,
+			 * because the footprint XY not in GCTP convention.
+			 *
+        		if (strstr(mapinfo->zonehem, "S")) 
+                		mapinfo->uly -= 1e7;
+			*/
 
 			/* Read no more */
 			fclose(fxml);
