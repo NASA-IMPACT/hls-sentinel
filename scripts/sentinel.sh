@@ -56,6 +56,7 @@ set_output_names () {
   gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
+  angleoutputfinal="${workingdir}/${outputname}.ANGLE.hdf"
 }
 
 exit_if_exists () {
@@ -144,6 +145,9 @@ mv "${nbar_input}.hdr" "${output_hdf}.hdr"
 # Convert to COGs
 echo "Converting to COGs"
 hdf_to_cog "$output_hdf" --output-dir "$workingdir" --product S30
+
+mv "$angleoutput" "$angleoutputfinal"
+hdf_to_cog "$angleoutputfinal" --output-dir "$workingdir" --product S30_ANGLES
 
 # Create thumbnail
 echo "Creating thumbnail"
