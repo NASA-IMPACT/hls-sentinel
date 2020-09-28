@@ -1,4 +1,4 @@
-/*  HDFEOS for S10, S30, and L30. */
+/*  HDFEOS for S10, S30, L30, and the solar-view angle. */
 
 #ifndef HLS_HDFEOS_H
 #define HLS_HDFEOS_H
@@ -9,6 +9,7 @@
 #include "s2r.h"
 #include "s2at30m.h"
 #include "lsat.h"
+#include "s2ang.h"
 
 /* Purely for the sake of HDFEOS; HLS processing does not rely on this. 
  * This information is copied from an opened HLS file.
@@ -82,4 +83,10 @@ int S30_PutSpaceDefHDF(s2at30m_t *tile, sds_info_t sds[], int nsds);
 /* L30 */
 int set_L30_sds_info(sds_info_t *all_sds,  int nsds,  lsat_t *lsat);
 int L30_PutSpaceDefHDF(lsat_t *tile, sds_info_t sds[], int nsds);
+
+/* solar-view angle. Works for both Sentinel and Landsat because they have the
+ * same SDS names */
+int set_S2ang_sds_info(sds_info_t *all_sds,  int nsds,  s2ang_t *s2ang);
+int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds);
+
 #endif

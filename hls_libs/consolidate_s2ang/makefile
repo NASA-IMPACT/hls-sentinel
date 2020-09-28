@@ -2,9 +2,11 @@ TGT = consolidate_s2ang
 OBJ = 	consolidate_s2ang.o \
 	s2detfoo.o\
 	s2ang.o\
+	s2r.o\
 	pnpoly.o \
 	util.o \
 	hdfutility.o \
+	hls_hdfeos.o
 
 	
 $(TGT): $(OBJ)
@@ -19,11 +21,17 @@ s2detfoo.o: ${SRC_DIR}/s2detfoo.c
 pnpoly.o: ${SRC_DIR}/pnpoly.c
 	$(CC) $(CFLAGS) -c ${SRC_DIR}/pnpoly.c  -I$(HDFINC) -I$(GCTPINC) -I$(SRC_DIR)
 
+s2r.o: ${SRC_DIR}/s2r.c
+	$(CC) $(CFLAGS) -c ${SRC_DIR}/s2r.c -I$(HDFINC) -I$(GCTPINC) -I$(SRC_DIR)
+
 s2ang.o: ${SRC_DIR}/s2ang.c
 	$(CC) $(CFLAGS) -c ${SRC_DIR}/s2ang.c -I$(HDFINC) -I$(GCTPINC) -I$(SRC_DIR)
 	
 hdfutility.o: ${SRC_DIR}/hdfutility.c
 	$(CC) $(CFLAGS) -c ${SRC_DIR}/hdfutility.c -I$(HDFINC) -I$(SRC_DIR)
+
+hls_hdfeos.o: ${SRC_DIR}/hls_hdfeos.c
+	$(CC) $(CFLAGS) -c ${SRC_DIR}/hls_hdfeos.c -I$(HDFINC) -I$(SRC_DIR)
 
 util.o: ${SRC_DIR}/util.c 
 	$(CC) $(CFLAGS) -c ${SRC_DIR}/util.c -I$(HDFINC) -I$(SRC_DIR)

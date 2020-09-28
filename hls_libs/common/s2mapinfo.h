@@ -9,7 +9,7 @@
 typedef struct {
 	int nrow[3];	/* nrow for 10m, 20m, and 60m bands */
 	int ncol[3]; 	/* ncol for 10m, 20m, and 60m bands */
-	char zonestr[10];
+	char zonehem[10];
 	double ulx;
 	double uly;
 } s2mapinfo_t;
