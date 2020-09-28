@@ -1,15 +1,23 @@
 /******************************************************************************** 
- * The input is the result of LaSRC. 
+ * The input is the result of LaSRC, and the output is the raw S10 (i.e., possible
+ * twin granules are not consolidated yet). 
  *
- * 1. Add Fmask output as a separate SDS named Fmask.
- *    Fmask for S2 was created at 20m, but in the output from this code it is saved
- *    at 10m resolution for easy evaluation with 10 visible bands.
- *    (In subsequent processing of S30, Fmask will be resampled to 30m.)
+ * 1. Add Fmask as a separate SDS named Fmask.
+ *    Fmask for S2 was created at 20m. This code first dilates cloud and cloud shadow 
+ *    by 7 pixels and then resamples and saves it at 10m resolution in the output for 
+ *    easy evaluation with 10 visible bands. (This is S10.) 
  * 
- * 2. AC CLOUD SDS is no longer combined with Fmask, but renamed ACmask. 
+ *    The reason for dilation by 7 20-m pixels is that after the Fmask is eventually
+ *    resampled to 30m in S30 the dilation is equivalent to 5 30-m pixels. The same
+ *    amount dilation will be applied for L30. (9/22/2020)
+ * 
+ * 2. Atmospheric correction CLOUD SDS is no longer combined with Fmask, but is renamed ACmask. 
+ *    Diable ACmask altogether by setting each pixel value to zero because the C LaSRC 
+ *    does not generate CLOUD and the CLOUD passed in is fake and may not be zero for 
+ *    each pixel.  (9/22/2020)  
  *
- * 3. Add spatial coverage attribute and add cloud cover attribute based on combination
- *    two masks.
+ * 3. Add spatial coverage attribute and add cloud cover attribute based on Fmask only.
+ *    (ACmask has no effect)
  * 4. The output become S10, in HDF-EOS format.
  *
  * Note that earlier when the two files of AC output was combined the reflectance 
@@ -25,12 +33,14 @@
  * yet, it cannot be used here. So add the metadata from two XML files again.
  *
  * Jun 25, 2019
+ * Sep 22, 2020
  ********************************************************************************/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
+#include "dilation.h"
 #include "hls_projection.h"
 #include "s2r.h"
 #include "util.h"
@@ -247,6 +257,9 @@ int copyref_addmask(s2r_t *s2in, char *fname_fmask, s2r_t *s2out)
 	}
 	fclose(ffmask);
 
+	/* Dilate 20m Fmask result by 7 pixels.  9/22/2020 */
+	dilate(fmask, nrow20m, ncol20m, 7);
+
 	for (irow = 0; irow < nrow10m; irow++) {
 		for (icol = 0; icol < ncol10m; icol++) {
 			k10m = irow * ncol10m + icol;
@@ -266,6 +279,10 @@ int copyref_addmask(s2r_t *s2in, char *fname_fmask, s2r_t *s2out)
 
 			switch(fmask[k20m])
 			{
+				case 254:	/* Dilated cloud or cloud shadow */
+					val = 1;
+					mask = (val << 2);
+					break;
 				case 5: 	/* CIRRUS. But not set in Fmask4.0. A placeholder for now. Jun 27, 2019 */
 					mask = 1;
 					break;
