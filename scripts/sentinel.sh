@@ -56,6 +56,7 @@ set_output_names () {
   gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
+  angleoutputfinal="${workingdir}/${outputname}.ANGLE.hdf"
 }
 
 exit_if_exists () {
@@ -145,6 +146,9 @@ mv "${nbar_input}.hdr" "${output_hdf}.hdr"
 echo "Converting to COGs"
 hdf_to_cog "$output_hdf" --output-dir "$workingdir" --product S30
 
+mv "$angleoutput" "$angleoutputfinal"
+hdf_to_cog "$angleoutputfinal" --output-dir "$workingdir" --product S30_ANGLES
+
 # Create thumbnail
 echo "Creating thumbnail"
 create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
@@ -187,7 +191,6 @@ fi
 echo "Generating GIBS browse subtiles"
 mkdir -p "$gibs_dir"
 granule_to_gibs "$workingdir" "$gibs_dir" "$outputname"
-ls -R "$gibs_dir"
 for gibs_id_dir in "$gibs_dir"/* ; do
     if [ -d "$gibs_id_dir" ]; then
       gibsid=$(basename "$gibs_id_dir")
@@ -198,18 +201,20 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       subtile_basename=$(basename "$xml" .xml)
       subtile_manifest_name="${subtile_basename}.json"
       subtile_manifest="${gibs_id_dir}/${subtile_manifest_name}"
+      gibs_id_bucket_key="$gibs_bucket_key/${gibsid}" 
+      echo "Gibs id bucket key is ${gibs_id_bucket_key}"
 
       create_manifest "$gibs_id_dir" "$subtile_manifest" \
-        "$gibs_bucket_key/${gibsid}" "HLSS30" "$subtile_basename" \
-        "$jobid" true
+        "$gibs_id_bucket_key" "HLSS30" "$subtile_basename" "$jobid" true
+
       # Copy GIBS tile package to S3.
       if [ -z "$debug_bucket" ]; then
-        aws s3 cp "$gibs_id_dir" "$gibs_bucket_key/${gibsid}" --exclude "*"  \
+        aws s3 cp "$gibs_id_dir" "$gibs_id_bucket_key" --exclude "*"  \
           --include "*.tif" --include "*.xml" --profile gccprofile --recursive
 
         # Copy manifest to S3 to signal completion.
         aws s3 cp "$subtile_manifest" \
-          "${gibs_bucket_key}/${gibsid}/${subtile_manifest_name}" \
+          "${gibs_id_bucket_key}/${subtile_manifest_name}" \
           --profile gccprofile
       else
         # Copy all intermediate files to debug bucket.

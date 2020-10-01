@@ -630,14 +630,19 @@ void setcoverage(s2r_t *s2r)
 			if (s2r->ref[7][k] != HLS_S2_FILLVAL) {	/* 7 is for 10m NIR */
 				npix++;
 				/* cirrus, cloud, and cloud shadow, aggressively based on ACmask and Fmask. */
+				
+				/* Ignore acmask because it is only a dummy SDS. 9/22/2020. 
 				if ( ((s2r->acmask[k] & 1) == 1 || ((s2r->acmask[k] >> 1) & 1) == 1 || ((s2r->acmask[k] >> 3) & 1) == 1) ||
 				     ((s2r->fmask[k] & 1) == 1  || ((s2r->fmask[k] >> 1) & 1) == 1  || ((s2r->fmask[k] >> 3) & 1) == 1))
+					ncloud++;
+				*/
+				if ( (s2r->fmask[k] & 1) == 1  || ((s2r->fmask[k] >> 1) & 1) == 1  || ((s2r->fmask[k] >> 3) & 1) == 1)
 					ncloud++;
 			}
 		}
 	}
 
-	s2r->spcover = (int) (npix * 100.0 / (s2r->nrow[0] * s2r->ncol[0]) + 0.5);
+	s2r->spcover = (int) (npix * 100.0 / (s2r->nrow[0] * s2r->ncol[0]));
 	s2r->clcover = (int) (ncloud * 100.0 / npix + 0.5);
 
 	SDsetattr(s2r->sd_id, SPCOVER, DFNT_INT16, 1, (VOIDP)&(s2r->spcover));
