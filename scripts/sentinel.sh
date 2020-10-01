@@ -17,7 +17,7 @@ gibs_bucket="$GIBS_OUTPUT_BUCKET"
 
 # Remove tmp files on exit
 # shellcheck disable=SC2064
-trap "ls -hR $workingdir; ps -ef; rm -rf $workingdir; exit" INT TERM EXIT
+trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
 mkdir -p "$workingdir"
