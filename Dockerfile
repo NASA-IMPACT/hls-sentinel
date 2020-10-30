@@ -113,7 +113,7 @@ RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.5
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.6
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.8
 
