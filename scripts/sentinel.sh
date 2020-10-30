@@ -180,8 +180,8 @@ echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
 if [ -z "$debug_bucket" ]; then
   aws s3 cp "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
-    --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" \
-    --profile gccprofile --recursive
+    --include "*.xml" --include "*.jpg" --include "*_stac.json" \
+    --exclude "*fmask.bin.aux.xml" --profile gccprofile --recursive
 
   # Copy manifest to S3 to signal completion.
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
