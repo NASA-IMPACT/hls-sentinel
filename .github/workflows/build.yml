@@ -33,3 +33,6 @@ jobs:
 
       - name: Build image
         run: docker build . --tag hls-sentinel
+
+      - name: Run image
+        run: docker run hls-sentinel
