@@ -35,4 +35,4 @@ jobs:
         run: docker build . --tag hls-sentinel
 
       - name: Run image
-        run: docker run -v ./lasrc_aux/:/lasrc_aux --env-file ./testenv hls-sentinel 
+        run: docker run -v ${GITHUB_WORKSPACE}/lasrc_aux/:/lasrc_aux --env-file ./testenv hls-sentinel 
