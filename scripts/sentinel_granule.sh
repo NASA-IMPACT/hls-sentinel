@@ -99,6 +99,8 @@ fi
 espa_xml=$(find . -type f -name "*.xml" ! -name "MTD_TL.xml" ! -name "MTD_MSIL1C.xml" -exec basename \{} \;)
 espa_id="${espa_xml%.*}"
 
+echo "$LASRC_AUX_DIR"
+ls /lasrc_aux
 # Run lasrc
 do_lasrc_sentinel.py --xml "$espa_xml"
 
