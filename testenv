@@ -4,4 +4,4 @@ GCC_ROLE_ARN=test
 DEBUG_BUCKET=hls-debug-output
 INPUT_BUCKET=hls-github-laads-bucket
 REPLACE_EXISTING=replace
-OMP_NUM_THREADS=2
+OMP_NUM_THREADS=1
