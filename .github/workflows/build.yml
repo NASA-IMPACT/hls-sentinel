@@ -40,4 +40,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
 
-        run: docker run -v ${GITHUB_WORKSPACE}/lasrc_aux/:/lasrc_aux --env-file ./testenv hls-sentinel -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION
+        run: docker run -v ${GITHUB_WORKSPACE}/lasrc_aux/:/lasrc_aux --env-file ./testenv -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION hls-sentinel 
