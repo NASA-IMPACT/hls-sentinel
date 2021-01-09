@@ -35,4 +35,9 @@ jobs:
         run: docker build . --tag hls-sentinel
 
       - name: Run image
-        run: docker run -v ${GITHUB_WORKSPACE}/lasrc_aux/:/lasrc_aux --env-file ./testenv hls-sentinel 
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-west-2
+
+        run: docker run -v ${GITHUB_WORKSPACE}/lasrc_aux/:/lasrc_aux --env-file ./testenv hls-sentinel -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_DEFAULT_REGION
