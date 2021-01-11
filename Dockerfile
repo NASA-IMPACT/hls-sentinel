@@ -11,7 +11,6 @@ ENV PREFIX=/usr/local \
     GCTPINC=/usr/local/include \
     GCTPLINK="-lGctp -lm" \
     HDFLINK=" -lmfhdf -ldf -lm" \
-		L8_AUX_DIR=/usr/local/src \
     ECS_ENABLE_TASK_IAM_ROLE=true \
     PYTHONPATH="${PYTHONPATH}:${PREFIX}/lib/python3.6/site-packages" \
     ACCODE=LaSRCL8V3.5.5 \
@@ -122,7 +121,7 @@ RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.5
 RUN pip3 install libxml2-python3
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.4
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.2
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-cmr_stac@v1.1
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-cmr_stac@v1.2
 
 COPY ./scripts/* ${PREFIX}/bin/
 ENV OMP_NUM_THREADS=4

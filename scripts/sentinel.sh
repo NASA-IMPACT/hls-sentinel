@@ -214,7 +214,8 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       # Copy GIBS tile package to S3.
       if [ -z "$debug_bucket" ]; then
         aws s3 cp "$gibs_id_dir" "$gibs_id_bucket_key" --exclude "*"  \
-          --include "*.tif" --include "*.xml" --profile gccprofile --recursive
+          --include "*.tif" --include "*.xml" --profile gccprofile \
+          --recursive --quiet
 
         # Copy manifest to S3 to signal completion.
         aws s3 cp "$subtile_manifest" \
@@ -223,7 +224,7 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       else
         # Copy all intermediate files to debug bucket.
         debug_bucket_key=s3://${debug_bucket}/${outputname}
-        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive
+        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet
       fi
     fi
 done
