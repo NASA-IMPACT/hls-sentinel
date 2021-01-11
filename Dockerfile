@@ -11,7 +11,6 @@ ENV PREFIX=/usr/local \
     GCTPINC=/usr/local/include \
     GCTPLINK="-lGctp -lm" \
     HDFLINK=" -lmfhdf -ldf -lm" \
-		L8_AUX_DIR=/usr/local/src \
     ECS_ENABLE_TASK_IAM_ROLE=true \
     PYTHONPATH="${PYTHONPATH}:${PREFIX}/lib/python3.6/site-packages" \
     ACCODE=LaSRCL8V3.5.5 \
