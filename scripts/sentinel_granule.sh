@@ -23,7 +23,7 @@ mkdir -p "$granuledir"
 # gsutil -m cp -r "$url" "$granuledir"
 
 # Download granule from s3
-aws s3 cp "$inputgranule" "$safezip"
+aws s3 cp "$inputgranule" "$safezip" --quiet
 unzip -q "$safezip" -d "$granuledir"
 
 # Get GRANULE sub directory
