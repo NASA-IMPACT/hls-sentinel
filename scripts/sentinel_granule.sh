@@ -23,7 +23,7 @@ mkdir -p "$granuledir"
 # gsutil -m cp -r "$url" "$granuledir"
 
 # Download granule from s3
-aws s3 cp "$inputgranule" "$safezip"
+aws s3 cp "$inputgranule" "$safezip" --quiet
 unzip -q "$safezip" -d "$granuledir"
 
 # Get GRANULE sub directory
@@ -32,7 +32,7 @@ safegranuledir="${safedirectory}/GRANULE/${grandir_id}"
 
 # Run derive_s2ang
 
-# For new SAFE format locate MTD_MSIL1C.xml
+# For new SAFE format locate MTD_TL.xml
 # For older SAFE formata locate S2[A|B]_OPER_MTD_*.xml
 xml=$(find "$safegranuledir" -maxdepth 1 -type f -name "*.xml")
 
@@ -52,9 +52,13 @@ derive_s2ang "$xml" "$detfoo_gml" "$detfoo" "$angleoutput"
 # The detfoo output is an unneccesary legacy output
 rm "$detfoo"
 
+# Check Sentinel cloud metadata.
+xml_safe="${safedirectory}/MTD_MSIL1C.xml"
+cloud_cover_valid=$(check_sentinel_clouds "$xml_safe")
+
 cd "$safegranuledir"
 # Run Fmask
-/usr/local/MATLAB/application/run_Fmask_4_2.sh /usr/local/MATLAB/v96 >> fmask_out.txt
+/usr/local/MATLAB/application/run_Fmask_4_3.sh /usr/local/MATLAB/v96 >> fmask_out.txt
 wait
 fmask_file=$(cat fmask_out.txt)
 echo "$fmask_file"
@@ -63,7 +67,7 @@ echo "$fmask_stdout"
 echo "Running parse_fmask"
 fmask_valid=$(parse_fmask "$fmask_stdout")
 echo "Granule is ${fmask_valid}"
-if [ "$fmask_valid" == "invalid" ]; then
+if [ "$fmask_valid" == "invalid" ] && [ "$cloud_cover_valid" == "invalid" ]; then
   echo "Fmask reports no clear pixels. Exiting now"
   exit 4
 fi

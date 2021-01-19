@@ -51,6 +51,7 @@ set_output_names () {
   nbar_hdr="${nbar_input}.hdr"
   output_thumbnail="${workingdir}/${outputname}.jpg"
   output_metadata="${workingdir}/${outputname}.cmr.xml"
+  output_stac_metadata="${workingdir}/${outputname}_stac.json"
   bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
   gibs_dir="${workingdir}/gibs"
   gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
@@ -155,7 +156,10 @@ create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
 
 # Create metadata
 echo "Creating metadata"
-create_metadata "$output_hdf" --save "$output_metadata"
+create_metadata "$output_hdf" --save "$output_metadata" 
+
+# Create STAC metadata
+cmr_to_stac_item "$output_metadata" "$output_stac_metadata"
 
 # Generate manifest
 echo "Generating manifest"
@@ -176,8 +180,8 @@ echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
 if [ -z "$debug_bucket" ]; then
   aws s3 cp "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
-    --include "*.xml" --include "*.jpg" --exclude "*fmask.bin.aux.xml" \
-    --profile gccprofile --recursive
+    --include "*.xml" --include "*.jpg" --include "*_stac.json" \
+    --exclude "*fmask.bin.aux.xml" --profile gccprofile --recursive
 
   # Copy manifest to S3 to signal completion.
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
@@ -210,7 +214,8 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       # Copy GIBS tile package to S3.
       if [ -z "$debug_bucket" ]; then
         aws s3 cp "$gibs_id_dir" "$gibs_id_bucket_key" --exclude "*"  \
-          --include "*.tif" --include "*.xml" --profile gccprofile --recursive
+          --include "*.tif" --include "*.xml" --profile gccprofile \
+          --recursive --quiet
 
         # Copy manifest to S3 to signal completion.
         aws s3 cp "$subtile_manifest" \
@@ -219,7 +224,7 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       else
         # Copy all intermediate files to debug bucket.
         debug_bucket_key=s3://${debug_bucket}/${outputname}
-        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive
+        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet
       fi
     fi
 done

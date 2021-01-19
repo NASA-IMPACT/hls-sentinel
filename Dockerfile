@@ -1,4 +1,4 @@
-FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:v3.0.4
+FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -11,7 +11,6 @@ ENV PREFIX=/usr/local \
     GCTPINC=/usr/local/include \
     GCTPLINK="-lGctp -lm" \
     HDFLINK=" -lmfhdf -ldf -lm" \
-		L8_AUX_DIR=/usr/local/src \
     ECS_ENABLE_TASK_IAM_ROLE=true \
     PYTHONPATH="${PYTHONPATH}:${PREFIX}/lib/python3.6/site-packages" \
     ACCODE=LaSRCL8V3.5.5 \
@@ -113,15 +112,16 @@ RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.5
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.6
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.7
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.8
 
 RUN pip3 install wheel
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.5
 RUN pip3 install libxml2-python3
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.4
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.2
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.5
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-cmr_stac@v1.3
 
 COPY ./scripts/* ${PREFIX}/bin/
 ENV OMP_NUM_THREADS=4
