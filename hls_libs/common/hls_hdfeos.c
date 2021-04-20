@@ -73,7 +73,7 @@ int set_S10_sds_info(sds_info_t *all_sds,  int nsds,  s2r_t *s2r)
 	return(0);
 }
 
-int S10_PutSpaceDefHDF(s2r_t *tile, sds_info_t sds[], int nsds)
+int S10_PutSpaceDefHDF(char *hdfname, sds_info_t sds[], int nsds)
 {
 	int32 sd_id;
 	char struct_meta[MYHDF_MAX_NATTR_VAL];      /*Make sure it is long enough*/
@@ -97,7 +97,6 @@ int S10_PutSpaceDefHDF(s2r_t *tile, sds_info_t sds[], int nsds)
 	int32 sphereCode=12;                        //WGS 84
 	char  datum[] = "WGS84";		     // 
 	int32 zoneCode = -1;                        //For UTM only. 
-	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	char cproj[] = "GCTP_UTM";
 	double pixsize[] = {10, 20, 60};
         int32 imgdim[] = {10980, 5490, 1830};
@@ -109,8 +108,11 @@ int S10_PutSpaceDefHDF(s2r_t *tile, sds_info_t sds[], int nsds)
 	float64 f_integral, f_fractional;
 	int isds;
 
+	/*
+	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	for (k = 0; k < NPROJ_PARAM_HDFEOS; k++)
 		projParameters[k] = 0.0;
+	*/
 
 	/*  Start to generate the character string for the global attribute:
 	    #define SPACE_STRUCT_METADATA ("StructMetadata.0")
@@ -313,150 +315,8 @@ int S10_PutSpaceDefHDF(s2r_t *tile, sds_info_t sds[], int nsds)
 	}
 
 
-	/* Write the StructMetadata attribute to the HDF file.  
-	 * Other global attributes have been set when the HDF is opened. */
-	/* DFACC_RDWR is for update */
-	if ((sd_id = SDstart(tile->fname, DFACC_RDWR)) == FAIL) {
-		sprintf(message, "Cannot open %s for DFACC_RDWR", tile->fname);
-		Error(message);
-	} 
-	
-	if (SDsetattr(sd_id, SPACE_STRUCT_METADATA, DFNT_CHAR8, strlen(struct_meta), (VOIDP)struct_meta) == FAIL) {
-		Error("Error write global attributes");
-		return(1);
-	}
-        
-	if (SDend(sd_id) == FAIL) {
-	    	sprintf(message, "Error in SDend() for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Setup the HDF Vgroup */
-	if ((hdf_id = Hopen(tile->fname, DFACC_RDWR, 0)) == FAIL) {
-		sprintf(message, "Error in Hopen () for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Start the Vgroup access */
-	if (Vstart(hdf_id) == FAIL) {
-	    	sprintf(message, "Error in Vstart () for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Create Root Vgroup for Grid */
-	vgroup_id[0] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[0] == FAIL) {
-		Error("Error in getting Grid Vgroup ID (Vattach)");
-		return(1);
-	}
-
-	if (Vsetname(vgroup_id[0], grid_name) == FAIL) {
-		Error("Error in setting Grid Vgroup name (Vsetname)");
-		return(1);
-	}
-
-	if (Vsetclass(vgroup_id[0], "GRID") == FAIL) {
-		Error("Error in setting Grid Vgroup class (Vsetclass)");
-		return(1);
-	}
-
-	/* Create Data Fields Vgroup */
-	vgroup_id[1] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[1] == FAIL) {
-		Error("Error in getting Data Fields Vgroup ID (Vattach)");
-		return(1);
-	}
-	if (Vsetname(vgroup_id[1], "Data Fields") == FAIL) {
-		Error("Error setting Data Fields Vgroup name (Vsetname)");
-		return(1);
-	}
-	if (Vsetclass(vgroup_id[1], "GRID Vgroup") == FAIL) {
-		Error("Error in setting Data Fields Vgroup class (Vsetclass)");
-		return(1);
-	}
-	if (Vinsert(vgroup_id[0], vgroup_id[1]) == FAIL) {
-		Error("Error in inserting Data Fields Vgroup (Vinsert)");
-		return(1);
-	}
-
-	/* Create Attributes Vgroup */
-	vgroup_id[2] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[2] == FAIL) {
-		Error("Error in getting Attributes Vgroup ID (Vattach)");
-		return(1);
-	}
-	if (Vsetname(vgroup_id[2], "Grid Attributes") == FAIL) {
-		Error("Error in setting Attributes Vgroup name (Vsetname)");
-		return(1);
-	}
-	if (Vsetclass(vgroup_id[2], "GRID Vgroup") == FAIL) { 
-	    	Error("Error in setting Attributes Vgroup class (Vsetclass)");
-		return(1);
-	}
-	if (Vinsert(vgroup_id[0], vgroup_id[2]) == FAIL) {
-		Error("Error in inserting Attributes Vgroup (Vinsert)");
-		return(1);
-	}
-
-	/* Attach SDSs to Data Fields Vgroup */
-	sd_id = SDstart(tile->fname, DFACC_RDWR);
-	if (sd_id == FAIL) {
-	    	Error("Error in opening output file for DFACC_RDWR(2)");
-		return(1);
-	}
-	for (isds = 0; isds < nsds; isds++) {
-		sds_index = SDnametoindex(sd_id, sds[isds].name);
-		if (sds_index == FAIL) {
-			sprintf(message, "Error in getting SDS index (SDnametoindex) for %s", sds[isds].name); 
-			Error(message);
-			return(1);
-		}
-		sds_id = SDselect(sd_id, sds_index);
-		if (sds_id == FAIL) {
-			Error("Error in getting SDS ID (SDselect)");
-			return(1);
-		}
-		if (Vaddtagref(vgroup_id[1], DFTAG_NDG, SDidtoref(sds_id)) == FAIL) {
-			Error("Error in adding reference tag to SDS (Vaddtagref)");
-			return(1);
-		}
-		if (SDendaccess(sds_id) == FAIL) {
-			Error("Error in SDendaccess");
-			return(1);
-		}
-	}
-	if (SDend(sd_id) == FAIL) {
-	    	Error("Error in SDend");
-		return(1);
-	}
-	    
-
-	/* Detach Vgroups */
-	if (Vdetach(vgroup_id[0]) == FAIL) {
-	    	Error("Error in detaching from Grid Vgroup (Vdetach)");
-		return(1);
-	}
-	if (Vdetach(vgroup_id[1]) == FAIL) {
-		Error("Error in detaching from Data Fields Vgroup (Vdetach)");
-		return(1);
-	}
-	if (Vdetach(vgroup_id[2]) == FAIL) {
-	    	Error("Error in detaching from Attributes Vgroup (Vdetach)");
-		return(1);
-	}
-
-	/* Close access */
-	if (Vend(hdf_id) == FAIL) { 
-	    	Error("Error in end Vgroup access (Vend)");
-		return(1);
-	}
-	if (Hclose(hdf_id) == FAIL) {
-	    	Error("Error in end HDF access (Hclose)");
-		return(1);
-	}
+	if ( PutSpaceDefHDF(hdfname, struct_meta, sds, nsds) != 0)
+		exit(1);
 
 	return(0);
 }
@@ -510,7 +370,7 @@ int set_S30_sds_info(sds_info_t *all_sds,  int nsds,  s2at30m_t *s2r)
 	return(0);
 }
 
-int S30_PutSpaceDefHDF(s2at30m_t *tile, sds_info_t sds[], int nsds)
+int S30_PutSpaceDefHDF(char *hdfname, sds_info_t sds[], int nsds)
 {
 	int32 sd_id;
 	char struct_meta[MYHDF_MAX_NATTR_VAL];      /*Make sure it is long enough*/
@@ -534,7 +394,6 @@ int S30_PutSpaceDefHDF(s2at30m_t *tile, sds_info_t sds[], int nsds)
 	int32 sphereCode=12;                        //WGS 84
 	char  datum[] = "WGS84";		     // 
 	int32 zoneCode = -1;                        //For UTM only. 
-	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	char cproj[] = "GCTP_UTM";
 	int datafield;	/* Does data field ID reset for each GRID, or it is cumulative? Oct 19, 2016. */
 	double pixsz;
@@ -543,8 +402,11 @@ int S30_PutSpaceDefHDF(s2at30m_t *tile, sds_info_t sds[], int nsds)
 	float64 f_integral, f_fractional;
 	int isds;
 
+	/*
+	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	for (k = 0; k < NPROJ_PARAM_HDFEOS; k++)
 		projParameters[k] = 0.0;
+	*/
 
 	/*  Start to generate the character string for the global attribute:
 	    #define SPACE_STRUCT_METADATA ("StructMetadata.0")
@@ -686,154 +548,12 @@ int S30_PutSpaceDefHDF(s2at30m_t *tile, sds_info_t sds[], int nsds)
 		return(1);
 	}
 
-
-	/* Write the StructMetadata attribute to the HDF file.  
-	 * Other global attributes have been set when the HDF is opened. */
-	/* DFACC_RDWR is for update */
-	if ((sd_id = SDstart(tile->fname, DFACC_RDWR)) == FAIL) {
-		sprintf(message, "Cannot open %s for DFACC_RDWR", tile->fname);
-		Error(message);
-	} 
-	
-	if (SDsetattr(sd_id, SPACE_STRUCT_METADATA, DFNT_CHAR8, strlen(struct_meta), (VOIDP)struct_meta) == FAIL) {
-		Error("Error write global attributes");
-		return(1);
-	}
-        
-	if (SDend(sd_id) == FAIL) {
-	    	sprintf(message, "Error in SDend() for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Setup the HDF Vgroup */
-	if ((hdf_id = Hopen(tile->fname, DFACC_RDWR, 0)) == FAIL) {
-		sprintf(message, "Error in Hopen () for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Start the Vgroup access */
-	if (Vstart(hdf_id) == FAIL) {
-	    	sprintf(message, "Error in Vstart () for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Create Root Vgroup for Grid */
-	vgroup_id[0] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[0] == FAIL) {
-		Error("Error in getting Grid Vgroup ID (Vattach)");
-		return(1);
-	}
-
-	if (Vsetname(vgroup_id[0], grid_name) == FAIL) {
-		Error("Error in setting Grid Vgroup name (Vsetname)");
-		return(1);
-	}
-
-	if (Vsetclass(vgroup_id[0], "GRID") == FAIL) {
-		Error("Error in setting Grid Vgroup class (Vsetclass)");
-		return(1);
-	}
-
-	/* Create Data Fields Vgroup */
-	vgroup_id[1] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[1] == FAIL) {
-		Error("Error in getting Data Fields Vgroup ID (Vattach)");
-		return(1);
-	}
-	if (Vsetname(vgroup_id[1], "Data Fields") == FAIL) {
-		Error("Error setting Data Fields Vgroup name (Vsetname)");
-		return(1);
-	}
-	if (Vsetclass(vgroup_id[1], "GRID Vgroup") == FAIL) {
-		Error("Error in setting Data Fields Vgroup class (Vsetclass)");
-		return(1);
-	}
-	if (Vinsert(vgroup_id[0], vgroup_id[1]) == FAIL) {
-		Error("Error in inserting Data Fields Vgroup (Vinsert)");
-		return(1);
-	}
-
-	/* Create Attributes Vgroup */
-	vgroup_id[2] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[2] == FAIL) {
-		Error("Error in getting Attributes Vgroup ID (Vattach)");
-		return(1);
-	}
-	if (Vsetname(vgroup_id[2], "Grid Attributes") == FAIL) {
-		Error("Error in setting Attributes Vgroup name (Vsetname)");
-		return(1);
-	}
-	if (Vsetclass(vgroup_id[2], "GRID Vgroup") == FAIL) { 
-	    	Error("Error in setting Attributes Vgroup class (Vsetclass)");
-		return(1);
-	}
-	if (Vinsert(vgroup_id[0], vgroup_id[2]) == FAIL) {
-		Error("Error in inserting Attributes Vgroup (Vinsert)");
-		return(1);
-	}
-
-	/* Attach SDSs to Data Fields Vgroup */
-	sd_id = SDstart(tile->fname, DFACC_RDWR);
-	if (sd_id == FAIL) {
-	    	Error("Error in opening output file for DFACC_RDWR(2)");
-		return(1);
-	}
-	for (isds = 0; isds < nsds; isds++) {
-		sds_index = SDnametoindex(sd_id, sds[isds].name);
-		if (sds_index == FAIL) {
-			sprintf(message, "Error in getting SDS index (SDnametoindex) for %s", sds[isds].name); 
-			Error(message);
-			return(1);
-		}
-		sds_id = SDselect(sd_id, sds_index);
-		if (sds_id == FAIL) {
-			Error("Error in getting SDS ID (SDselect)");
-			return(1);
-		}
-		if (Vaddtagref(vgroup_id[1], DFTAG_NDG, SDidtoref(sds_id)) == FAIL) {
-			Error("Error in adding reference tag to SDS (Vaddtagref)");
-			return(1);
-		}
-		if (SDendaccess(sds_id) == FAIL) {
-			Error("Error in SDendaccess");
-			return(1);
-		}
-	}
-	if (SDend(sd_id) == FAIL) {
-	    	Error("Error in SDend");
-		return(1);
-	}
-	    
-
-	/* Detach Vgroups */
-	if (Vdetach(vgroup_id[0]) == FAIL) {
-	    	Error("Error in detaching from Grid Vgroup (Vdetach)");
-		return(1);
-	}
-	if (Vdetach(vgroup_id[1]) == FAIL) {
-		Error("Error in detaching from Data Fields Vgroup (Vdetach)");
-		return(1);
-	}
-	if (Vdetach(vgroup_id[2]) == FAIL) {
-	    	Error("Error in detaching from Attributes Vgroup (Vdetach)");
-		return(1);
-	}
-
-	/* Close access */
-	if (Vend(hdf_id) == FAIL) { 
-	    	Error("Error in end Vgroup access (Vend)");
-		return(1);
-	}
-	if (Hclose(hdf_id) == FAIL) {
-	    	Error("Error in end HDF access (Hclose)");
-		return(1);
-	}
+	if ( PutSpaceDefHDF(hdfname, struct_meta, sds, nsds) != 0)
+		exit(1);
 
 	return(0);
 }
+
 
 int set_L30_sds_info(sds_info_t *all_sds,  int nsds,  lsat_t *lsat)
 {
@@ -904,7 +624,7 @@ int set_L30_sds_info(sds_info_t *all_sds,  int nsds,  lsat_t *lsat)
 	return(0);
 }
 
-int L30_PutSpaceDefHDF(lsat_t *tile, sds_info_t sds[], int nsds)
+int L30_PutSpaceDefHDF(char *hdfname, sds_info_t sds[], int nsds)
 {
 	int32 sd_id;
 	char struct_meta[MYHDF_MAX_NATTR_VAL];      /*Make sure it is long enough*/
@@ -928,7 +648,6 @@ int L30_PutSpaceDefHDF(lsat_t *tile, sds_info_t sds[], int nsds)
 	int32 sphereCode=12;                        //WGS 84
 	char  datum[] = "WGS84";		     // 
 	int32 zoneCode = -1;                        //For UTM only. 
-	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	char cproj[] = "GCTP_UTM";
 	int datafield;	/* Does data field ID reset for each GRID, or it is cumulative? Oct 19, 2016. */
 	double pixsz;
@@ -937,8 +656,11 @@ int L30_PutSpaceDefHDF(lsat_t *tile, sds_info_t sds[], int nsds)
 	float64 f_integral, f_fractional;
 	int isds;
 
+	/*
+	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	for (k = 0; k < NPROJ_PARAM_HDFEOS; k++)
 		projParameters[k] = 0.0;
+	*/
 
 	/*  Start to generate the character string for the global attribute:
 	    #define SPACE_STRUCT_METADATA ("StructMetadata.0")
@@ -1077,150 +799,8 @@ int L30_PutSpaceDefHDF(lsat_t *tile, sds_info_t sds[], int nsds)
 		return(1);
 	}
 
-
-	/* Write the StructMetadata attribute to the HDF file.  
-	 * Other global attributes have been set when the HDF is opened. */
-	/* DFACC_RDWR is for update */
-	if ((sd_id = SDstart(tile->fname, DFACC_RDWR)) == FAIL) {
-		sprintf(message, "Cannot open %s for DFACC_RDWR", tile->fname);
-		Error(message);
-	} 
-	
-	if (SDsetattr(sd_id, SPACE_STRUCT_METADATA, DFNT_CHAR8, strlen(struct_meta), (VOIDP)struct_meta) == FAIL) {
-		Error("Error write global attributes");
-		return(1);
-	}
-	if (SDend(sd_id) == FAIL) {
-	    	sprintf(message, "Error in SDend() for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Setup the HDF Vgroup */
-	if ((hdf_id = Hopen(tile->fname, DFACC_RDWR, 0)) == FAIL) {
-		sprintf(message, "Error in Hopen () for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Start the Vgroup access */
-	if (Vstart(hdf_id) == FAIL) {
-	    	sprintf(message, "Error in Vstart () for %s", tile->fname);
-	    	Error(message);
-		return(1);
-	}
-
-	/* Create Root Vgroup for Grid */
-	vgroup_id[0] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[0] == FAIL) {
-		Error("Error in getting Grid Vgroup ID (Vattach)");
-		return(1);
-	}
-
-	if (Vsetname(vgroup_id[0], grid_name) == FAIL) {
-		Error("Error in setting Grid Vgroup name (Vsetname)");
-		return(1);
-	}
-
-	if (Vsetclass(vgroup_id[0], "GRID") == FAIL) {
-		Error("Error in setting Grid Vgroup class (Vsetclass)");
-		return(1);
-	}
-
-	/* Create Data Fields Vgroup */
-	vgroup_id[1] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[1] == FAIL) {
-		Error("Error in getting Data Fields Vgroup ID (Vattach)");
-		return(1);
-	}
-	if (Vsetname(vgroup_id[1], "Data Fields") == FAIL) {
-		Error("Error setting Data Fields Vgroup name (Vsetname)");
-		return(1);
-	}
-	if (Vsetclass(vgroup_id[1], "GRID Vgroup") == FAIL) {
-		Error("Error in setting Data Fields Vgroup class (Vsetclass)");
-		return(1);
-	}
-	if (Vinsert(vgroup_id[0], vgroup_id[1]) == FAIL) {
-		Error("Error in inserting Data Fields Vgroup (Vinsert)");
-		return(1);
-	}
-
-	/* Create Attributes Vgroup */
-	vgroup_id[2] = Vattach(hdf_id, -1, "w");
-	if (vgroup_id[2] == FAIL) {
-		Error("Error in getting Attributes Vgroup ID (Vattach)");
-		return(1);
-	}
-	if (Vsetname(vgroup_id[2], "Grid Attributes") == FAIL) {
-		Error("Error in setting Attributes Vgroup name (Vsetname)");
-		return(1);
-	}
-	if (Vsetclass(vgroup_id[2], "GRID Vgroup") == FAIL) { 
-	    	Error("Error in setting Attributes Vgroup class (Vsetclass)");
-		return(1);
-	}
-	if (Vinsert(vgroup_id[0], vgroup_id[2]) == FAIL) {
-		Error("Error in inserting Attributes Vgroup (Vinsert)");
-		return(1);
-	}
-
-	/* Attach SDSs to Data Fields Vgroup */
-	sd_id = SDstart(tile->fname, DFACC_RDWR);
-	if (sd_id == FAIL) {
-	    	Error("Error in opening output file for DFACC_RDWR(2)");
-		return(1);
-	}
-	for (isds = 0; isds < nsds; isds++) {
-		sds_index = SDnametoindex(sd_id, sds[isds].name);
-		if (sds_index == FAIL) {
-			sprintf(message, "Error in getting SDS index (SDnametoindex) for %s", sds[isds].name); 
-			Error(message);
-			return(1);
-		}
-		sds_id = SDselect(sd_id, sds_index);
-		if (sds_id == FAIL) {
-			Error("Error in getting SDS ID (SDselect)");
-			return(1);
-		}
-		if (Vaddtagref(vgroup_id[1], DFTAG_NDG, SDidtoref(sds_id)) == FAIL) {
-			Error("Error in adding reference tag to SDS (Vaddtagref)");
-			return(1);
-		}
-		if (SDendaccess(sds_id) == FAIL) {
-			Error("Error in SDendaccess");
-			return(1);
-		}
-	}
-	if (SDend(sd_id) == FAIL) {
-	    	Error("Error in SDend");
-		return(1);
-	}
-	    
-
-	/* Detach Vgroups */
-	if (Vdetach(vgroup_id[0]) == FAIL) {
-	    	Error("Error in detaching from Grid Vgroup (Vdetach)");
-		return(1);
-	}
-	if (Vdetach(vgroup_id[1]) == FAIL) {
-		Error("Error in detaching from Data Fields Vgroup (Vdetach)");
-		return(1);
-	}
-	if (Vdetach(vgroup_id[2]) == FAIL) {
-	    	Error("Error in detaching from Attributes Vgroup (Vdetach)");
-		return(1);
-	}
-
-	/* Close access */
-	if (Vend(hdf_id) == FAIL) { 
-	    	Error("Error in end Vgroup access (Vend)");
-		return(1);
-	}
-	if (Hclose(hdf_id) == FAIL) {
-	    	Error("Error in end HDF access (Hclose)");
-		return(1);
-	}
+	if ( PutSpaceDefHDF(hdfname, struct_meta, sds, nsds) != 0)
+		exit(1);
 
 	return(0);
 }
@@ -1257,15 +837,73 @@ int set_S2ang_sds_info(sds_info_t *all_sds,  int nsds,  s2ang_t *s2ang)
 	return(0);
 }
 
-int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
+int set_L8ang_sds_info(sds_info_t *all_sds,  int nsds,  l8ang_t *l8ang)
+{
+	int iband;
+	char message[MSGLEN];
+	int NBAND = 4;
+
+	char *dimnames[2] =  {"YDim_Grid", "XDim_Grid"};
+
+	if (nsds != NBAND) {
+		sprintf(message, "Number of angle bands must be %d", NBAND);
+		Error(message);
+		return(1);
+	}
+
+	for (iband = 0; iband < NBAND; iband++) {
+		strcpy(all_sds[iband].name,  ANG_SDS_NAME[iband]);
+		strcpy(all_sds[iband].data_type_name, "DFNT_UINT16");
+		all_sds[iband].data_type = DFNT_UINT16;
+		strcpy(all_sds[iband].dimname[0], dimnames[0]);
+		strcpy(all_sds[iband].dimname[1], dimnames[1]);
+
+		all_sds[iband].ulx = l8ang->ulx;
+		all_sds[iband].uly = l8ang->uly;
+		all_sds[iband].nrow = l8ang->nrow;
+		all_sds[iband].ncol = l8ang->ncol;
+		all_sds[iband].pixsz = ANGPIXSZ; 
+		all_sds[iband].zonecode =  atoi(l8ang->zonehem);
+	}
+
+	return(0);
+}
+
+//int set_aod_sds_info(sds_info_t *all_sds,  int nsds, aod_t *aod)
+//{
+//	char message[MSGLEN];
+//	char *dimnames[2] =  {"YDim_Grid", "XDim_Grid"};
+//	int iband = 0; 	/* There is only one SDS */
+//
+//	if (nsds != 1) {
+//		fprintf(stderr, "Only 1 SDS allowed in set_aod_sds_info()\n");
+//		return(1);
+//	}	
+//	iband = 0;
+//
+//	strcpy(all_sds[iband].name,  LASRC_AOD);
+//	strcpy(all_sds[iband].data_type_name, "DFNT_UINT8");
+//	all_sds[iband].data_type = DFNT_UINT8;
+//	strcpy(all_sds[iband].dimname[0], dimnames[0]);
+//	strcpy(all_sds[iband].dimname[1], dimnames[1]);
+//
+//	all_sds[iband].ulx = aod->ulx;
+//	all_sds[iband].uly = aod->uly;
+//	all_sds[iband].nrow = aod->nrow;
+//	all_sds[iband].ncol = aod->ncol;
+//	all_sds[iband].pixsz = HLS_PIXSZ; 
+//	all_sds[iband].zonecode =  atoi(aod->zonehem);
+//
+//	return(0);
+//}
+
+int angle_PutSpaceDefHDF(char *hdfname, sds_info_t sds[], int nsds)
 {
 	int32 sd_id;
 	char struct_meta[MYHDF_MAX_NATTR_VAL];      /*Make sure it is long enough*/
 	char cbuf[MYHDF_MAX_NATTR_VAL];
 	char *hdfeos_version = "HDFEOS_V2.4";
 	int ip, ic;
-	int32 hdf_id;
-	int32 vgroup_id[3];
 	int32 sds_index, sds_id;
 	char *grid_name = "Grid"; /* A silly name */
 	char message[MSGLEN];
@@ -1281,7 +919,6 @@ int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
 	int32 sphereCode=12;                        //WGS 84
 	char  datum[] = "WGS84";		     // 
 	int32 zoneCode = -1;                        //For UTM only. 
-	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	char cproj[] = "GCTP_UTM";
 	int datafield;	/* Does data field ID reset for each GRID, or it is cumulative? Oct 19, 2016. */
 	double pixsz;
@@ -1290,8 +927,11 @@ int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
 	float64 f_integral, f_fractional;
 	int isds;
 
+	/*
+	float64 projParameters[NPROJ_PARAM_HDFEOS];
 	for (k = 0; k < NPROJ_PARAM_HDFEOS; k++)
 		projParameters[k] = 0.0;
+	*/
 
 	/*  Start to generate the character string for the global attribute:
 	    #define SPACE_STRUCT_METADATA ("StructMetadata.0")
@@ -1427,12 +1067,28 @@ int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
 		return(1);
 	}
 
+	
+	if (PutSpaceDefHDF(hdfname, struct_meta, sds, nsds) != 0)
+		exit(0);
+
+	return(0);
+}
+
+int PutSpaceDefHDF(char *hdfname, char *struct_meta, sds_info_t sds[], int nsds)
+{
+
+	int32 sd_id;
+	int32 hdf_id;
+	int32 sds_index, sds_id, isds;
+	int32 vgroup_id[3];
+	char *grid_name = "Grid"; /* A silly name */
+	char message[MSGLEN];
 
 	/* Write the StructMetadata attribute to the HDF file.  
 	 * Other global attributes have been set when the HDF is opened. */
 	/* DFACC_RDWR is for update */
-	if ((sd_id = SDstart(tile->fname, DFACC_RDWR)) == FAIL) {
-		sprintf(message, "Cannot open %s for DFACC_RDWR", tile->fname);
+	if ((sd_id = SDstart(hdfname, DFACC_RDWR)) == FAIL) {
+		sprintf(message, "Cannot open %s for DFACC_RDWR", hdfname);
 		Error(message);
 	} 
 	
@@ -1441,21 +1097,21 @@ int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
 		return(1);
 	}
 	if (SDend(sd_id) == FAIL) {
-	    	sprintf(message, "Error in SDend() for %s", tile->fname);
+	    	sprintf(message, "Error in SDend() for %s", hdfname);
 	    	Error(message);
 		return(1);
 	}
 
 	/* Setup the HDF Vgroup */
-	if ((hdf_id = Hopen(tile->fname, DFACC_RDWR, 0)) == FAIL) {
-		sprintf(message, "Error in Hopen () for %s", tile->fname);
+	if ((hdf_id = Hopen(hdfname, DFACC_RDWR, 0)) == FAIL) {
+		sprintf(message, "Error in Hopen () for %s", hdfname);
 	    	Error(message);
 		return(1);
 	}
 
 	/* Start the Vgroup access */
 	if (Vstart(hdf_id) == FAIL) {
-	    	sprintf(message, "Error in Vstart () for %s", tile->fname);
+	    	sprintf(message, "Error in Vstart () for %s", hdfname);
 	    	Error(message);
 		return(1);
 	}
@@ -1516,7 +1172,7 @@ int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
 	}
 
 	/* Attach SDSs to Data Fields Vgroup */
-	sd_id = SDstart(tile->fname, DFACC_RDWR);
+	sd_id = SDstart(hdfname, DFACC_RDWR);
 	if (sd_id == FAIL) {
 	    	Error("Error in opening output file for DFACC_RDWR(2)");
 		return(1);
@@ -1574,6 +1230,8 @@ int S2ang_PutSpaceDefHDF(s2ang_t *tile, sds_info_t sds[], int nsds)
 
 	return(0);
 }
+
+
 
 /*********************************************************************************
     Append the characters in *s to *cbuf.
