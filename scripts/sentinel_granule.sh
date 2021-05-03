@@ -78,9 +78,7 @@ echo "Converting to flat binary"
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
-# Zips and unpacks S2 SAFE directory.  The ESA SAFE data will be provided zipped.
 cd "$granuledir"
-# zip -r -q "$safezip" "${granule}.SAFE"
 
 # Removes previously unzipped SAFE directory for replacement with ESPA unpacking
 # result
@@ -111,6 +109,7 @@ hls_espa_two_xml="${espa_id}_2_hls.xml"
 sr_hdf_one="${espa_id}_sr_1.hdf"
 sr_hdf_two="${espa_id}_sr_2.hdf"
 hls_sr_combined_hdf="${espa_id}_sr_combined.hdf"
+aerosol_qa="${espa_id}_sr_aerosol.img"
 # Surface reflectance is current final output
 hls_sr_output_hdf="$granuleoutput"
 
@@ -128,7 +127,7 @@ twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_
 
 # Run addFmaskSDS
 echo "Adding Fmask SDS"
-addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
+addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" "$aerosol_qa" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
 
 # Trim edge pixels for spurious SR values
 echo "Trimming output hdf file"
