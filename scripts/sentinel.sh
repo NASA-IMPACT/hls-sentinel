@@ -178,6 +178,8 @@ echo "[gccprofile]" > ~/.aws/credentials
 echo "role_arn = ${bucket_role_arn}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
+# Timestamp for writing debug output to bucket
+timestamp=$(date +'%Y_%m_%d_%H_%M')
 if [ -z "$debug_bucket" ]; then
   aws s3 cp "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
     --include "*.xml" --include "*.jpg" --include "*_stac.json" \
@@ -188,7 +190,6 @@ if [ -z "$debug_bucket" ]; then
 else
   # Copy all intermediate files to debug bucket.
   echo "Copy files to debug bucket"
-  timestamp=$(date +'%Y_%m_%d_%H_%M')
   debug_bucket_key=s3://${debug_bucket}/${outputname}_${timestamp}
   aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
 fi
@@ -226,7 +227,6 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       else
         # Copy all intermediate files to debug bucket.
         echo "Copy files to debug bucket"
-        timestamp=$(date +'%Y_%m_%d_%H_%M')
         debug_bucket_key=s3://${debug_bucket}/${outputname}_${timestamp}
         aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet
       fi
