@@ -159,7 +159,8 @@ echo "Creating metadata"
 create_metadata "$output_hdf" --save "$output_metadata" 
 
 # Create STAC metadata
-cmr_to_stac_item "$output_metadata" "$output_stac_metadata"
+cmr_to_stac_item "$output_metadata" "$output_stac_metadata" \
+  data.lpdaac.earthdatacloud.nasa.gov 020
 
 # Generate manifest
 echo "Generating manifest"
