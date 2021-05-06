@@ -43,10 +43,11 @@ set_output_names () {
   day=${date:6:2}
   hms=${date:8:7}
 
+  hlsversion="v2.0"
   day_of_year=$(get_doy "${year}" "${month}" "${day}")
-  outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.v1.5"
+  outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.${hlsversion}"
   output_hdf="${workingdir}/${outputname}.hdf"
-  nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
+  nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.${hlsversion}"
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
   output_thumbnail="${workingdir}/${outputname}.jpg"
