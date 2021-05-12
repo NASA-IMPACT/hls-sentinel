@@ -276,7 +276,7 @@ int open_s2at30m(s2at30m_t *s2at30m, intn access_mode)
 				"3      cloud shadow\n"
 				"2      adjacent to cloud\n"
 				"1      cloud\n"
-				"0      cirrus\n");
+				"0      cirrus cloud\n");
 		SDsetattr(s2at30m->sds_id_acmask, "ACmask description", DFNT_CHAR8, strlen(attr), (VOIDP)attr);
 
 		for (irow = 0; irow < s2at30m->nrow; irow++) {
@@ -298,13 +298,17 @@ int open_s2at30m(s2at30m_t *s2at30m, intn access_mode)
 
 		/* Note: For better view, the blanks within the string is blank space characters, not tab */
 		sprintf(attr, 	"Bits are listed from the MSB (bit 7) to the LSB (bit 0): \n"
-				"7-6    unused:\n"
+				"7-6    aerosol:\n"
+				"       00 - climatology\n"
+				"       01 - low\n"
+				"       10 - average\n"
+				"       11 - high\n"
 				"5      water\n"
 				"4      snow/ice\n"
 				"3      cloud shadow\n"
-				"2      unused\n"
+				"2      adjacent to cloud\n"
 				"1      cloud\n"
-				"0      unused\n");
+				"0      cirrus cloud\n");
 		SDsetattr(s2at30m->sds_id_fmask, "Fmask description", DFNT_CHAR8, strlen(attr), (VOIDP)attr);
 
 		for (irow = 0; irow < s2at30m->nrow; irow++) {
@@ -587,7 +591,23 @@ int resample_s2to30m(s2r_t *s2r, s2at30m_t *s2at30m)
 					if (anyset) 
 						mask = (mask | (01 << bit));
 				}
-				/* Bits 6-7 are unused  */
+				/* Like ACmask, bits 6-7 are a group for qualitative aerosol level borrowed from USGS.
+				 * 4 levels. May 11, 2021 */
+				aerocnt[0] = aerocnt[1] = aerocnt[2] = aerocnt[3] = 0;
+				for (irow10m = irow*3; irow10m < (irow+1)*3; irow10m++) {
+					for (icol10m = icol*3; icol10m < (icol+1)*3; icol10m++) {
+						k10m = irow10m * s2r->ncol[0] + icol10m;
+						val = ((s2r->fmask[k10m] >> 6) & 03); 
+						aerocnt[val]++;
+					}
+				}
+				/* A higher aerosol level takes precedence over a lower level. Nov 14, 2017 */
+				val = 0;
+				for (i = 0; i <= 3; i++) {  /* 4 levels */
+					if (aerocnt[i] > 0)  
+						val = i;
+				}
+				mask = (mask | (val << 6));
 
 				s2at30m->fmask[k30m] = mask;
 			}
