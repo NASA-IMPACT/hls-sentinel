@@ -147,7 +147,10 @@ int open_s2ang(s2ang_t *s2ang, intn access_mode)
 			PutSDSDimInfo(s2ang->sds_id[ib], dimnames[0], 0);
 			PutSDSDimInfo(s2ang->sds_id[ib], dimnames[1], 1);
 			SDsetcompress(s2ang->sds_id[ib], comp_type, &c_info);	
-			SDsetattr(s2ang->sds_id[ib], "_FillValue", DFNT_UINT16, 1, (VOIDP)&angfill);
+			//SDsetattr(s2ang->sds_id[ib], "_FillValue", DFNT_UINT16, 1, (VOIDP)&angfill);
+			SDsetattr(s2ang->sds_id[ib], "_FillValue", DFNT_CHAR8, strlen(ang_fillval), (VOIDP)ang_fillval);
+			SDsetattr(s2ang->sds_id[ib], "scale_factor", DFNT_CHAR8, strlen(ang_scale_factor), (VOIDP)ang_scale_factor); 
+			SDsetattr(s2ang->sds_id[ib], "add_offset", DFNT_CHAR8, strlen(ang_add_offset), (VOIDP)ang_add_offset); 
 		}
 
 		/* 9/23/2020 */
