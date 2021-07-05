@@ -10,15 +10,17 @@
  *    The reason for dilation by 7 20-m pixels is that after the Fmask is eventually
  *    resampled to 30m in S30 the dilation is equivalent to 5 30-m pixels. The same
  *    amount dilation will be applied for L30. (9/22/2020)
+ * 2  Extract 2 bits of aerosol level from aerosol QA and add as bits 7-6 of Fmask. 
+ *    (Apr 14, 2021)
  * 
- * 2. Atmospheric correction CLOUD SDS is no longer combined with Fmask, but is renamed ACmask. 
+ * 3. Atmospheric correction CLOUD SDS is no longer combined with Fmask, but is renamed ACmask. 
  *    Diable ACmask altogether by setting each pixel value to zero because the C LaSRC 
  *    does not generate CLOUD and the CLOUD passed in is fake and may not be zero for 
  *    each pixel.  (9/22/2020)  
  *
- * 3. Add spatial coverage attribute and add cloud cover attribute based on Fmask only.
+ * 4. Add spatial coverage attribute and add cloud cover attribute based on Fmask only.
  *    (ACmask has no effect)
- * 4. The output become S10, in HDF-EOS format.
+ * 5. The output become S10, in HDF-EOS format.
  *
  * Note that earlier when the two files of AC output was combined the reflectance 
  * fillval was changed from -100 to -1000, and mask fillval from 24 to 255.  (Jun 27, 2019)
@@ -34,6 +36,7 @@
  *
  * Jun 25, 2019
  * Sep 22, 2020
+ * Apr 14, 2021: extract 2 bits of aerosol level from aerosol QA and add as bits 7-6 of Fmask.
  ********************************************************************************/
 
 #include <stdio.h>
@@ -46,13 +49,14 @@
 #include "util.h"
 #include "hls_hdfeos.h"
 
-int copyref_addmask(s2r_t *s2in, char *fname_fmask, s2r_t *s2_out);
+int copyref_addmask(s2r_t *s2in, char *fname_fmask, char *fname_aeroQA, s2r_t *s2_out);
 
 int main(int argc, char *argv[])
 {
 	/* Command-line parameters */
 	char fname_s2rin[500];		/* AC output, whose CLOUD SDS is to be renamed ACmask */
 	char fname_fmask[500];		/* fmask result in flat binary */
+	char fname_aeroQA[500];		/* Aerosol QA byte from USGS LaSRC */
 	char fname_safexml[500];
 	char fname_granulexml[500];
 	char accodename[100];
@@ -64,17 +68,18 @@ int main(int argc, char *argv[])
 	char creationtime[100];
 	int ret;
 
-	if (argc != 7) {
-		fprintf(stderr, "%s s2rin fmask safexml granulexml accodename s2rout \n", argv[0]);
+	if (argc != 8) {
+		fprintf(stderr, "%s s2rin fmask aeroQA safexml granulexml accodename s2rout \n", argv[0]);
 		exit(1);
 	}
 
 	strcpy(fname_s2rin,   argv[1]);
 	strcpy(fname_fmask,   argv[2]);
-	strcpy(fname_safexml, argv[3]);
-	strcpy(fname_granulexml, argv[4]);
-	strcpy(accodename,       argv[5]);
-	strcpy(fname_s2rout,     argv[6]);
+	strcpy(fname_aeroQA,  argv[3]);
+	strcpy(fname_safexml, argv[4]);
+	strcpy(fname_granulexml, argv[5]);
+	strcpy(accodename,       argv[6]);
+	strcpy(fname_s2rout,     argv[7]);
 
 	/* Open the input for read*/
 	strcpy(s2rin.fname, fname_s2rin);
@@ -102,7 +107,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* Copy all the reflectance SDS from input and add ACmask and Fmask */
-	ret = copyref_addmask(&s2rin, fname_fmask, &s2rout);
+	/* Dilate Fmask (we don't have ACmask in USGS LaSRC. Oct 28, 2020 */
+	ret = copyref_addmask(&s2rin, fname_fmask, fname_aeroQA, &s2rout);
 	if (ret != 0) {
 		Error("Error in copyref_addmask");
 		exit(1);
@@ -131,8 +137,7 @@ int main(int argc, char *argv[])
 	/* Make it hdfeos */
  	sds_info_t all_sds[S2NBAND+2];
 	set_S10_sds_info(all_sds, S2NBAND+2, &s2rout);
-
-	ret = S10_PutSpaceDefHDF(&s2rout, all_sds, S2NBAND+2); 
+	ret = S10_PutSpaceDefHDF(s2rout.fname, all_sds, S2NBAND+2); 
 	if (ret != 0) {
 		Error("Error in HLS_PutSpaceDefHDF");
 		exit(1);
@@ -141,7 +146,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int copyref_addmask(s2r_t *s2in, char *fname_fmask, s2r_t *s2out)
+int copyref_addmask(s2r_t *s2in, char *fname_fmask, char *fname_aeroQA, s2r_t *s2out)
 {
 	int ib;
 	int psi;
@@ -260,6 +265,25 @@ int copyref_addmask(s2r_t *s2in, char *fname_fmask, s2r_t *s2out)
 	/* Dilate 20m Fmask result by 7 pixels.  9/22/2020 */
 	dilate(fmask, nrow20m, ncol20m, 7);
 
+	/* Read USGS aerosol QA byte. Apr 14, 2021*/
+	FILE *faeroQA;
+	unsigned char *aeroQA;
+	if ((aeroQA = (uint8*)calloc(nrow10m * ncol10m, sizeof(uint8))) == NULL) {
+		Error("Cannot allocate memory\n");
+		return(1);
+	}
+	if ((faeroQA = fopen(fname_aeroQA, "r")) == NULL) {
+		sprintf(message, "Cannot read Fmask %s\n", fname_aeroQA);
+		Error(message);
+		return(1);
+	}
+	if (fread(aeroQA, sizeof(uint8), nrow10m * ncol10m, faeroQA) !=  nrow10m * ncol10m) {
+		sprintf(message, "Fmask file size wrong: %s\n", fname_aeroQA);
+		Error(message);
+		return(1);
+	}
+	fclose(faeroQA);
+
 	for (irow = 0; irow < nrow10m; irow++) {
 		for (icol = 0; icol < ncol10m; icol++) {
 			k10m = irow * ncol10m + icol;
@@ -310,6 +334,9 @@ int copyref_addmask(s2r_t *s2in, char *fname_fmask, s2r_t *s2out)
 					Error(message);
 					exit(1);
 			}
+
+			/* Add the 2 bits of aerosol level from USGS aerosol QA */
+			mask = mask | (((aeroQA[k10m] >> 6 ) & 03) << 6);
 			s2out->fmask[k10m] = mask;
 		}
 	}

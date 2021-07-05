@@ -87,7 +87,8 @@ int main(int argc, char *argv[])
 	/* Make it HDF-EOS */
 	sds_info_t all_sds[NANG];
         set_S2ang_sds_info(all_sds, NANG, &s2angC);
-        ret = S2ang_PutSpaceDefHDF(&s2angC, all_sds, NANG);
+        // ret = S2ang_PutSpaceDefHDF(&s2angC, all_sds, NANG);
+        ret = angle_PutSpaceDefHDF(s2angC.fname, all_sds, NANG);
         if (ret != 0) {
                 Error("Error in HLS_PutSpaceDefHDF");
                 exit(1);

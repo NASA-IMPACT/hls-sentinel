@@ -43,10 +43,11 @@ set_output_names () {
   day=${date:6:2}
   hms=${date:8:7}
 
+  hlsversion="v2.0"
   day_of_year=$(get_doy "${year}" "${month}" "${day}")
-  outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.v1.5"
+  outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.${hlsversion}"
   output_hdf="${workingdir}/${outputname}.hdf"
-  nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.v1.5"
+  nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.${hlsversion}"
   nbar_input="${workingdir}/${nbar_name}.hdf"
   nbar_hdr="${nbar_input}.hdr"
   output_thumbnail="${workingdir}/${outputname}.jpg"
@@ -159,7 +160,8 @@ echo "Creating metadata"
 create_metadata "$output_hdf" --save "$output_metadata" 
 
 # Create STAC metadata
-cmr_to_stac_item "$output_metadata" "$output_stac_metadata"
+cmr_to_stac_item "$output_metadata" "$output_stac_metadata" \
+  data.lpdaac.earthdatacloud.nasa.gov 020
 
 # Generate manifest
 echo "Generating manifest"
@@ -178,6 +180,8 @@ echo "[gccprofile]" > ~/.aws/credentials
 echo "role_arn = ${bucket_role_arn}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
+# Timestamp for writing debug output to bucket
+timestamp=$(date +'%Y_%m_%d_%H_%M')
 if [ -z "$debug_bucket" ]; then
   aws s3 cp "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
     --include "*.xml" --include "*.jpg" --include "*_stac.json" \
@@ -187,7 +191,8 @@ if [ -z "$debug_bucket" ]; then
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
 else
   # Copy all intermediate files to debug bucket.
-  debug_bucket_key=s3://${debug_bucket}/${outputname}
+  echo "Copy files to debug bucket"
+  debug_bucket_key=s3://${debug_bucket}/${outputname}_${timestamp}
   aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
 fi
 
@@ -223,7 +228,8 @@ for gibs_id_dir in "$gibs_dir"/* ; do
           --profile gccprofile
       else
         # Copy all intermediate files to debug bucket.
-        debug_bucket_key=s3://${debug_bucket}/${outputname}
+        echo "Copy files to debug bucket"
+        debug_bucket_key=s3://${debug_bucket}/${outputname}_${timestamp}
         aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet
       fi
     fi

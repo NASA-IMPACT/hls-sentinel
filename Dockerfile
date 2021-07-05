@@ -1,5 +1,4 @@
-# espa-surface-reflectance-v3.0.5
-FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-c2:v3.0.5
+FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-3.1.0
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -109,20 +108,21 @@ COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S
 COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
 
 RUN pip3 install --upgrade awscli
+RUN pip3 install click==7.1.2
 RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.0
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.1
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v1.6
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.0
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v1.8
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v2.0
 
 RUN pip3 install wheel
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.5
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.6
 RUN pip3 install libxml2-python3
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.4
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.5
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-cmr_stac@v1.3
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.6
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.6
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-cmr_stac@v1.5
 
 COPY ./scripts/* ${PREFIX}/bin/
 ENV OMP_NUM_THREADS=4

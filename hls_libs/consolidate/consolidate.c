@@ -18,6 +18,8 @@
  *   apparently selects better pixels, but there is no guarantee that terrible 
  *   atmospheric correction won't result in higher NDVI. (Finished on Jul 26, 2019)
  *
+ * Apr 1, 2020: Note that the mean sun/view angles are from twin A only; later in 
+ *   derive_s2nbar these angles will be recomputed and so set properly. 
  ********************************************************************************/
 
 #include "s2r.h"
@@ -134,7 +136,7 @@ int main(int argc, char * argv[])
 	/* Make it hdfeos */
  	sds_info_t all_sds[S2NBAND+2];
 	set_S10_sds_info(all_sds, S2NBAND+2, &s2rO);
-	ret = S10_PutSpaceDefHDF(&s2rO, all_sds, S2NBAND+2);
+	ret = S10_PutSpaceDefHDF(s2rO.fname, all_sds, S2NBAND+2);
 	if (ret != 0) {
 		Error("Error in HLS_PutSpaceDefHDF");
 		exit(1);
