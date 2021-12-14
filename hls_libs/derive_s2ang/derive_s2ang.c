@@ -1,11 +1,13 @@
 /* Derive the solar zenith/azimuth and view zenith/azimuth for every 30m pixel.
- * The view zenith/azimuth are interpolated from the 5km data for B06.
+ * The view zenith/azimuth are interpolated from the 5km data for B06 and used
+ * for all bands.
  * 
- * Note that the filename of footprint gml for B01 is passed in and from that
- * the filename for B06 is derived. The use of B06 for all bands  is a recent 
- * change and therefore on the commandline B01 fileanme is still used just to 
- * the keep interface the same, for the IMPACT team.
- * 9/23/2020
+ * 1 December, 2021
+ * This process needs the detector footprint image to cookie-cut the interpolated
+ * angle image.  
+ * For Sentinel-2 PB before 4.0, the footprint is derived from the B06 footprint GML.
+ * And for PB 4.0 and after, read the B06 footprint image directly;  the image was
+ * ENVI plain binary converted from ESA JP2.
  */
 
 #include <stdio.h>
@@ -22,8 +24,8 @@
 int main(int argc, char *argv[])
 {
 	char fname_xml[LINELEN];	/* angle is in this granule xml*/
-	char fname_b01_gml[LINELEN];	/* Use b01 detfoo gml to find gml of other bands*/
-	char fname_detfoo[LINELEN]; 	/* detfoo is created and saved by this code */
+	char fname_b06_detfoo[LINELEN];	/* Either gml or plain binary for B06, at 20m */ 
+	char fname_detfoo[LINELEN]; 	/* detfoo is created at 30m and saved by this code */
 	char fname_ang[LINELEN]; 	/* angle output */
 
 	s2mapinfo_t mapinfo;
@@ -35,12 +37,12 @@ int main(int argc, char *argv[])
 	char *pos;
 
 	if (argc != 5) {
-		fprintf(stderr, "%s in.granule.xml in.detfoo.b01.gml out.detfoo.hdf out.ang.hdf\n", argv[0]);
+		fprintf(stderr, "%s in.granule.xml in.detfoo.20m out.detfoo.30m.hdf out.ang.hdf\n", argv[0]);
 		exit(1);
 	}
 
 	strcpy(fname_xml, argv[1]);
-	strcpy(fname_b01_gml, argv[2]);
+	strcpy(fname_b06_detfoo, argv[2]);
 	strcpy(fname_detfoo, argv[3]);
 	strcpy(fname_ang, argv[4]);
 
@@ -58,19 +60,61 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	/* Rasterize the footprint vector, and split the overlap region evenly.
+	/* For processing baseline preceding 4.0, rasterize the footprint vector given in GML,
+	 * and then split the overlap region evenly if needed (for the initial few years 
+	 * there was overlap in footprint).
+	 * For PB4.0 and later, read the footprint image directly.
+	 * 
 	 * Note that the corners in the GML refer to the footprint extent, not the tile extent.
-	 * Use B01 footprint filename to find names of all other bands.
-	 * Actually now a single band B06 is selected. But still keep the function interface
-	 * to pass in B01 filename. 
 	 */ 
-	ret = rasterize_s2detfoo(&s2detfoo, fname_b01_gml);
-	if (ret != 0) {
-		sprintf(message, "Error in deriving detfoo with b01 name: %s", fname_b01_gml);
-		Error(message);
-		exit(ret);
+
+	if (strstr(fname_b06_detfoo, "B06.gml")) {
+		ret = rasterize_s2detfoo(&s2detfoo, fname_b06_detfoo);
+		if (ret != 0) {
+			sprintf(message, "Error in deriving detfoo: %s", fname_b06_detfoo);
+			Error(message);
+			exit(ret);
+		}
+		split_overlap(&s2detfoo);	// Nov 28, 2019. No overlap any more.
 	}
-	split_overlap(&s2detfoo);	// Nov 28, 2019. No overlap any more.
+	else if (strstr(fname_b06_detfoo, "B06.bin")) {
+		FILE *df;
+		uint8  *detid;
+
+		int irow, icol, row20m, col20m;
+		int k; 
+		if ((df = fopen(fname_b06_detfoo, "r")) == NULL) {
+			sprintf(message, "Cannot open %s", fname_b06_detfoo);
+			Error(message);
+			exit(1);
+		}
+
+		/*  index 1 in mapinfo is for 20m bands including B06 */
+		k = mapinfo.nrow[1] * mapinfo.ncol[1];
+		if ((detid = (uint8*)calloc(k, sizeof(uint8))) == NULL) {
+			Error("Cannot allocate memory");
+			exit(1);
+		}
+		if (fread(detid, sizeof(uint8), k, df) != k) {
+			sprintf(message, "File size is wrong, too short: %s", fname_b06_detfoo);
+			Error(message);
+			exit(1);
+		}
+
+		for (irow = 0; irow < s2detfoo.nrow; irow++) {
+			row20m = floor((irow + 0.5) * DETFOOPIXSZ / 20.0); /* 20 is B06 pixel size  */
+			for (icol = 0; icol < s2detfoo.ncol; icol++) {
+				col20m = floor((icol + 0.5) * DETFOOPIXSZ / 20.0); /* 20 is B06 pixel size  */
+				s2detfoo.detid[irow*s2detfoo.ncol+icol] = detid[row20m * mapinfo.ncol[1] + col20m]; 
+			}
+		}
+		free(detid);
+	}
+	else {
+		sprintf(message, "Input is neither gml nor bin for B06: %s", fname_b06_detfoo);
+		Error(message);
+		exit(1);
+	}
 
 	/* Create an empty angle file */
 	strcpy(s2ang.fname, fname_ang);

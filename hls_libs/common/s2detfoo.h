@@ -36,7 +36,19 @@ typedef struct {
 /* open s2 detfoo for read or create */
 int open_s2detfoo(s2detfoo_t *s2detfoo, intn access_mode);
 
-/* Return 100 if the detfoo vector is not found in gml.  May 1, 2017. */
+/********************************************************************************
+ * Generate the B06 detector footprint image by rasterizing the footprint vector 
+ * polygon (before PB4.0).
+ *
+ * If there is detector footprint overlap (much earlier than PB 4.0),  write at the 
+ * relevant pixels the number id_left * NDETECTOR + id_right 
+ * (id_left and id_right are the detector id on the left and right respectively.)
+ * Later on, another function will evenly split the overlap between two detectors.
+ *
+ * Return 100 if the detfoo vector is not found.  May 1, 2017.
+ *
+ * Use B06 for all other bands. Sep 7, 2020.
+ */
 int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml);
 
 /* Equally split the overlap area for each row of image.

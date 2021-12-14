@@ -44,10 +44,20 @@ if [ "$solar_zenith_valid" == "invalid" ]; then
   exit 3
 fi
 
-# Locate DETFOO gml for Band 01.  derive_s2ang will then infer names for other bands
-detfoo_gml=$(find "${safegranuledir}/QI_DATA" -maxdepth 1 -type f -name "*DETFOO*_B01*.gml")
+# Locate detector footprint for B06
+echo "Locating detector footprint for B06"
+detfoo06_extension=$(get_detector_footprint_extension "$safedirectory")
+if [ "$detfoo06_extension" = jp2 ]; then
+  detfoo06=$(get_detector_footprint "$safedirectory")
+  detfoo06_bin="${granuledir}/detfoo06.bin"
+  gdal_translate -of ENVI "$detfoo06" "$detfoo06_bin"
+  detfoo06="$detfoo06_bin"
+else
+  detfoo06=$(get_detector_footprint "$safedirectory")
+fi
+
 echo "Running derive_s2ang"
-derive_s2ang "$xml" "$detfoo_gml" "$detfoo" "$angleoutput"
+derive_s2ang "$xml" "$detfoo06" "$detfoo" "$angleoutput"
 
 # The detfoo output is an unneccesary legacy output
 rm "$detfoo"
