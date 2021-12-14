@@ -49,7 +49,7 @@ echo "Locating detector footprint for B06"
 detfoo06_extension=$(get_detector_footprint_extension "$safedirectory")
 if [ "$detfoo06_extension" = jp2 ]; then
   detfoo06=$(get_detector_footprint "$safedirectory")
-  detfoo06_bin="${granuledir}/detfoo06.bin"
+  detfoo06_bin="${granuledir}/MSK_DETFOO_B06.bin"
   gdal_translate -of ENVI "$detfoo06" "$detfoo06_bin"
   detfoo06="$detfoo06_bin"
 else
