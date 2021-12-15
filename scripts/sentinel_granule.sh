@@ -132,7 +132,7 @@ convert_espa_to_hdf --xml="$hls_espa_one_xml" --hdf="$sr_hdf_one"
 convert_espa_to_hdf --xml="$hls_espa_two_xml" --hdf="$sr_hdf_two"
 
 echo "Copy files to debug bucket"
-debug_bucket_key=s2://${debug_bucket}/${jobid}
+debug_bucket_key=s3://${debug_bucket}/${jobid}
 aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
 
 # Combine split hdf files and resample 10M SR bands back to 20M and 60M.
