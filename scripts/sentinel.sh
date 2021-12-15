@@ -15,17 +15,6 @@ debug_bucket="$DEBUG_BUCKET"
 replace_existing="$REPLACE_EXISTING"
 gibs_bucket="$GIBS_OUTPUT_BUCKET"
 
-copy_debug() {
-  rv=$?
-  if [ "$rv" = 1  ]; then
-    echo "Copy files to debug bucket"
-    debug_bucket_key=s3://${debug_bucket}/${jobid}
-    aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
-  fi
-  exit $rv
-}
-
-trap "copy_debug" EXIT
 # Remove tmp files on exit
 # shellcheck disable=SC2064
 trap "rm -rf $workingdir; exit" INT TERM EXIT
