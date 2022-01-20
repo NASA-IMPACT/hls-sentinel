@@ -71,19 +71,20 @@ int open_s2detfoo(s2detfoo_t *s2detfoo, intn access_mode)
 }
 
 /********************************************************************************
- * Rasterize the footprint vector polygon and fill the polygon with detector id.
- * For the overlapped area,  fill with id_left * NDETECTOR + id_right (id_left and id_right are
- * the detector id on the left and right respectively.
- * Use the b01 gml filename to find the gml of B06 (Sep 7, 2020: Although now derive 
- * angle from B06 only, still pass in b01 gml so that the interface won't change. )
+ * Generate the B06 detector footprint image by rasterizing the footprint vector 
+ * polygon (before PB4.0).
+ *
+ * If there is detector footprint overlap (much earlier than PB 4.0),  write at the 
+ * relevant pixels the number id_left * NDETECTOR + id_right 
+ * (id_left and id_right are the detector id on the left and right respectively.)
+ * Later on, another function will evenly split the overlap between two detectors.
  *
  * Return 100 if the detfoo vector is not found.  May 1, 2017.
  *
- * Use the gml of B06 for all other bands. Sep 7, 2020.
+ * Use B06 for all other bands. Sep 7, 2020.
  */
-int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
+int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b06_gml)
 {
-	char fname_gml[LINELEN];
 	FILE *fgml;
 	char line[500];
 	char str[500];
@@ -98,9 +99,9 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 	char message[MSGLEN];
 	int no_vector = 100;    /* Return if no vector is found */
 
-	pos = strstr(fname_b01_gml, "DETFOO"); /* Cannot be more specific because of different naming convention */
+	pos = strstr(fname_b06_gml, "B06.gml"); 
         if (pos == NULL) {
-                sprintf(message, "Not gml file? %s", fname_b01_gml);
+                sprintf(message, "Not B06 gml file? %s", fname_b06_gml);
 		Error(message);
 		return(1);
         }
@@ -110,11 +111,8 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 		Error(message);
 		return(1);
 	}
-	strcpy(fname_gml, fname_b01_gml);
-	pos = strstr(fname_gml, "B01"); /* Works for both naming conventions */
-	strncpy(pos, S2_SDS_NAME[5], 3);	/* Use the gml for B06 */
-	if ((fgml = fopen(fname_gml, "r")) == NULL) {
-		sprintf(message, "Cannot open for read: %s", fname_gml);
+	if ((fgml = fopen(fname_b06_gml, "r")) == NULL) {
+		sprintf(message, "Cannot open for read: %s", fname_b06_gml);
 		Error(message);
 		return(1);
 	}
@@ -143,7 +141,7 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 			fscanf(fgml, "%s", str);
 			fscanf(fgml, "%s", str);
 			if (strstr(str, "srsDimension=\"3\">") == NULL) {
-				sprintf(message, "Pattern \"srsDimension\" not found. %s", fname_gml);
+				sprintf(message, "Pattern \"srsDimension\" not found. %s", fname_b06_gml);
 				Error(message);
 				return(1);
 			}
@@ -163,7 +161,7 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 						xylen *= 2;
 						if ((x = realloc(x, xylen*sizeof(double))) == NULL || 
 						    (y = realloc(y, xylen*sizeof(double))) == NULL) {
-							sprintf(message, "Cannot open for read: %s", fname_gml);
+							sprintf(message, "Cannot open for read: %s", fname_b06_gml);
 							Error(message);
 							return(1);
 						}
@@ -251,7 +249,7 @@ int rasterize_s2detfoo(s2detfoo_t *s2detfoo, char *fname_b01_gml)
 	}
 
 	if (! found_vector) {
-		sprintf(message, "Detector footprint vector not found for band %s: %s", S2_SDS_NAME[5], fname_gml);
+		sprintf(message, "Detector footprint vector not found for band %s: %s", S2_SDS_NAME[5], fname_b06_gml);
 		Error(message);	
 		return(no_vector);
 	}
