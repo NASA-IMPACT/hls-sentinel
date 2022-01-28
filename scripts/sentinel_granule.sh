@@ -30,8 +30,6 @@ unzip -q "$safezip" -d "$granuledir"
 grandir_id=$(get_s2_granule_dir "${safedirectory}")
 safegranuledir="${safedirectory}/GRANULE/${grandir_id}"
 
-# Run derive_s2ang
-
 # For new SAFE format locate MTD_TL.xml
 # For older SAFE formata locate S2[A|B]_OPER_MTD_*.xml
 xml=$(find "$safegranuledir" -maxdepth 1 -type f -name "*.xml")
@@ -56,6 +54,7 @@ else
   detfoo06=$(get_detector_footprint "$safedirectory")
 fi
 
+# Run derive_s2ang
 echo "Running derive_s2ang"
 derive_s2ang "$xml" "$detfoo06" "$detfoo" "$angleoutput"
 
@@ -68,7 +67,7 @@ cloud_cover_valid=$(check_sentinel_clouds "$xml_safe")
 
 cd "$safegranuledir"
 # Run Fmask
-/usr/local/MATLAB/application/run_Fmask_4_4.sh /usr/local/MATLAB/v910 >> fmask_out.txt
+run_Fmask.sh >> fmask_out.txt
 wait
 fmask_file=$(cat fmask_out.txt)
 echo "$fmask_file"
