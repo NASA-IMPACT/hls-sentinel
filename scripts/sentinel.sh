@@ -128,13 +128,25 @@ create_s2at30m "$granuleoutput" "$resample30m"
 
 # Unlike all the other C libs, derive_s2nbar and L8like modify the input file
 # Move the resample output to nbar naming.
-mv "$resample30m" "$nbar_input"
-mv "$resample30m_hdr" "$nbar_hdr"
+# Maintain intermediate 30m version in debug mode.
+if [ -z "$debug_bucket" ]; then
+  mv "$resample30m" "$nbar_input"
+  mv "$resample30m_hdr" "$nbar_hdr"
+else
+  cp "$resample30m" "$nbar_input"
+  cp "$resample30m_hdr" "$nbar_hdr"
+fi
 
 # Nbar
 echo "Running derive_s2nbar"
 cfactor="${workingdir}/cfactor.hdf"
 derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
+
+# Maintain intermediate nbar version in debug mode.
+if [ "$debug_bucket" ]; then
+  cp "$nbar_input" "${workingdir}/${outputname}_nbar_intermediate.hdf"
+  cp "$nbar_hdr" "${workingdir}/${outputname}_nbar_intermediate.hdr"
+fi
 
 # Bandpass
 echo "Running L8like"
