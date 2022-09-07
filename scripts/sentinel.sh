@@ -142,10 +142,12 @@ echo "Running derive_s2nbar"
 cfactor="${workingdir}/cfactor.hdf"
 derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
 
+nbarIntermediate="${workingdir}/nbarIntermediate.hdf"
+nbarIntermediate_hdr="${nbarIntermediate}.hdr"
 # Maintain intermediate nbar version in debug mode.
 if [ "$debug_bucket" ]; then
-  cp "$nbar_input" "${workingdir}/${outputname}_nbar_intermediate.hdf"
-  cp "$nbar_hdr" "${workingdir}/${outputname}_nbar_intermediate.hdr"
+  cp "$nbar_input" "$nbarIntermediate"
+  cp "$nbar_hdr" "$nbarIntermediate_hdr"
 fi
 
 # Bandpass
@@ -202,6 +204,10 @@ if [ -z "$debug_bucket" ]; then
   # Copy manifest to S3 to signal completion.
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
 else
+  # Convert intermediate hdf to COGs
+  hdf_to_cog "$resample30m" --output-dir "$workingdir" --product S30
+  hdf_to_cog "$nbarIntermediate" --output-dir "$workingdir" --product S30
+
   # Copy all intermediate files to debug bucket.
   echo "Copy files to debug bucket"
   debug_bucket_key=s3://${debug_bucket}/${outputname}_${timestamp}
