@@ -120,7 +120,7 @@ RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v2.0
 RUN pip3 install wheel
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.7
 RUN pip3 install libxml2-python3
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.7
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v1.8
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.8
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-cmr_stac@v1.7
 
