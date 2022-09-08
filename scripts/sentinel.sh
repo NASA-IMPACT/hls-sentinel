@@ -202,9 +202,10 @@ if [ -z "$debug_bucket" ]; then
   # Copy manifest to S3 to signal completion.
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
 else
+  # Create 
   # Convert intermediate hdf to COGs
-  hdf_to_cog "$resample30m" --output-dir "$workingdir" --product S30
-  hdf_to_cog "$nbarIntermediate" --output-dir "$workingdir" --product S30
+  hdf_to_cog "$resample30m" --output-dir "$workingdir" --product S30 --debug-mode
+  hdf_to_cog "$nbarIntermediate" --output-dir "$workingdir" --product S30 --debug-mode
 
   # Copy all intermediate files to debug bucket.
   echo "Copy files to debug bucket"
