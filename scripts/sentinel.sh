@@ -128,13 +128,27 @@ create_s2at30m "$granuleoutput" "$resample30m"
 
 # Unlike all the other C libs, derive_s2nbar and L8like modify the input file
 # Move the resample output to nbar naming.
-mv "$resample30m" "$nbar_input"
-mv "$resample30m_hdr" "$nbar_hdr"
+# Maintain intermediate 30m version in debug mode.
+if [ -z "$debug_bucket" ]; then
+  mv "$resample30m" "$nbar_input"
+  mv "$resample30m_hdr" "$nbar_hdr"
+else
+  cp "$resample30m" "$nbar_input"
+  cp "$resample30m_hdr" "$nbar_hdr"
+fi
 
 # Nbar
 echo "Running derive_s2nbar"
 cfactor="${workingdir}/cfactor.hdf"
 derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
+
+nbarIntermediate="${workingdir}/nbarIntermediate.hdf"
+nbarIntermediate_hdr="${nbarIntermediate}.hdr"
+# Maintain intermediate nbar version in debug mode.
+if [ "$debug_bucket" ]; then
+  cp "$nbar_input" "$nbarIntermediate"
+  cp "$nbar_hdr" "$nbarIntermediate_hdr"
+fi
 
 # Bandpass
 echo "Running L8like"
@@ -180,8 +194,6 @@ echo "[gccprofile]" > ~/.aws/credentials
 echo "role_arn = ${bucket_role_arn}" >> ~/.aws/credentials
 echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
 
-# Timestamp for writing debug output to bucket
-timestamp=$(date +'%Y_%m_%d_%H_%M')
 if [ -z "$debug_bucket" ]; then
   aws s3 cp "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
     --include "*.xml" --include "*.jpg" --include "*_stac.json" \
@@ -190,10 +202,15 @@ if [ -z "$debug_bucket" ]; then
   # Copy manifest to S3 to signal completion.
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
 else
+  # Create 
+  # Convert intermediate hdf to COGs
+  hdf_to_cog "$resample30m" --output-dir "$workingdir" --product S30 --debug-mode
+  hdf_to_cog "$nbarIntermediate" --output-dir "$workingdir" --product S30 --debug-mode
+
   # Copy all intermediate files to debug bucket.
   echo "Copy files to debug bucket"
-  debug_bucket_key=s3://${debug_bucket}/${outputname}_${timestamp}
-  aws s3 cp "$workingdir" "$debug_bucket_key" --recursive
+  debug_bucket_key=s3://${debug_bucket}/${outputname}
+  aws s3 cp "$workingdir" "$debug_bucket_key" --recursive --acl public-read
 fi
 
 # Generate GIBS browse subtiles
@@ -229,8 +246,8 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       else
         # Copy all intermediate files to debug bucket.
         echo "Copy files to debug bucket"
-        debug_bucket_key=s3://${debug_bucket}/${outputname}_${timestamp}
-        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet
+        debug_bucket_key=s3://${debug_bucket}/${outputname}
+        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet --acl public-read
       fi
     fi
 done
