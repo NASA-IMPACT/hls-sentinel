@@ -23,7 +23,7 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      
+
       # Lint shell scripts
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@master
@@ -41,4 +41,4 @@ jobs:
           secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           region: us-west-2
           local-image: hls-sentinel
-          image: hls-sentinel:${PULL_NUMBER}
+          image: hls-sentinel:$PULL_NUMBER
