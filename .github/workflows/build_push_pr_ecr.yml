@@ -1,7 +1,8 @@
-name: build_push_to_ecr
+name: build_push_pr_ecr
 
 on:
-  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
     branches: [ dev ]
 
 jobs:
@@ -27,6 +28,8 @@ jobs:
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@master
 
+      - run: echo ::set-env name=pull_number::$(jq — raw-output .pull_request.number $GITHUB_EVENT_PATH)
+
       - name: Build image
         run: docker build . --tag hls-sentinel
 
@@ -38,4 +41,4 @@ jobs:
           secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           region: us-west-2
           local-image: hls-sentinel
-          image: hls-sentinel
+          image: hls-sentinel:${pull_number}
