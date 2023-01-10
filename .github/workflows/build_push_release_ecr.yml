@@ -1,4 +1,4 @@
-name: build_push_to_prod_ecr
+name: build_push_release_ecr
 
 on:
   release:
