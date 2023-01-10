@@ -27,10 +27,8 @@ jobs:
       # Lint shell scripts
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@master
-
-      - run: echo "PULL_NUMBER=$(jq — raw-output .pull_request.number $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-
-      - run: echo $PULL_NUMBER
+      
+      - run: echo ${{ github.event.pull_request.number }}
 
       # - name: Build image
         # run: docker build . --tag hls-sentinel
