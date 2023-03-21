@@ -5,11 +5,29 @@
  * indicates whether there is a loss of packets for a pixel in a  spectral 
  * band, or there is cross-talk, or saturation.
  *
- * If any of the anomalies occurred, set the reflectance to HLS_REFL_FILLVAL.
+ * The details of the mask: 
+ *	https://sentinels.copernicus.eu/web/sentinel/technical-guides/sentinel-2-msi/data-quality-reports
+ *
+ *	layer	1: lost ancillary packets, 
+ *			2: degraded ancillary packets, 
+ *			3: lost MSI packets, 
+ *			4: degraded MSI packets, 
+ *			5: defective pixels, 
+ *			6: no data, 
+ *			7: partially corrected cross talk, 
+ *			8: saturated pixels. 
+ *	"For each spectral band, the mask is defined at the same spatial resolution as that of the spectral band. 
+ *	In a first step, layer #7 and 8 (partially corrected and saturated) is not activated" 
+ *	(layer 7 is set, contradicting ESA document!)
+ *
+ *  Decided to mask 3 (lost MSI packets) and 4 (degraded MSI packets) only. So far, 5 and 7 are present in 
+ *  B10-B11, because interpolation is used to fill 5 and the cross talk is partially corrected.
+ *  Saturated pixels are still useful for the magnitude of the reflectance; keep it.
  *
  * A very late addition, but important.
  * Sept 20, 2022
  * Jan 13, 2023
+ * Mar 20, 2023
  ********************************************************************************/
 
 #include <stdio.h>
@@ -40,6 +58,9 @@ int main(int argc, char *argv[])
     uint8 *mask;
     char junkchar;      /* A junk character for testing file size */
     char message[LINELEN];
+
+	char maskSet = 0;		/* Whether the quality mask is set for a band */
+	int8 layer[NLAYER];			/* Which layer of quality mask is set */
     int ret;
 
     if (argc != 3) {
@@ -75,8 +96,6 @@ int main(int argc, char *argv[])
     
     for (ib = 0; ib < S2NBAND; ib++) {
         strncpy(cpos, S2_SDS_NAME[ib], 3);
-        fprintf(stderr, "sds = %s\n", S2_SDS_NAME[ib]);
-        fprintf(stderr, "maskname = %s\n", qmname); 
 
         psi = get_pixsz_index(ib);
         nrow = s2rin.nrow[psi];
@@ -107,15 +126,35 @@ int main(int argc, char *argv[])
             exit(1);
         } 
         
+		maskSet = 0;
+		for (il = 0; il < NLAYER; il++) 
+			layer[il] = -1;
         for (irow = 0; irow < nrow; irow++) {
             for (icol = 0; icol < ncol; icol++) {
                 k = irow * ncol + icol;
                 for (il = 0; il < NLAYER; il++) {
-                    if (mask[il*npix+k] == 1)
-                        s2rin.ref[ib][k] = HLS_REFL_FILLVAL;
+                    if (mask[il*npix+k] == 1) {
+						if (il == 2 || il == 3)		/* lost or degraded MSI packets; most severe problem */
+							s2rin.ref[ib][k] = HLS_REFL_FILLVAL;
+
+						maskSet = 1;
+						layer[il] = il;		/* Assuming only one layer is set for a given band */
+
+					}
+
                 }
             }
         }
+
+		if (maskSet) { 
+			fprintf(stderr, "maskname = %s\n", qmname); 
+            for (il = 0; il < NLAYER; il++) {
+				if (layer[il] != -1)
+					fprintf(stderr, "Band %s quality mask is set for layer %d\n", S2_SDS_NAME[ib], layer[il]+1);
+			}
+			fprintf(stderr, "\n");
+		}
+
         free(mask);
     }
 
