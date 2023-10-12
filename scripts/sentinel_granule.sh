@@ -118,7 +118,7 @@ hls_espa_two_xml="${espa_id}_2_hls.xml"
 sr_hdf_one="${espa_id}_sr_1.hdf"
 sr_hdf_two="${espa_id}_sr_2.hdf"
 hls_sr_combined_hdf="${espa_id}_sr_combined.hdf"
-aerosol_qa="${espa_id}_sr_aerosol.img"
+aerosol_qa="${espa_id}_sr_aerosol_qa.img"
 # Surface reflectance is current final output
 hls_sr_output_hdf="$granuleoutput"
 
