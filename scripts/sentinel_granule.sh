@@ -136,6 +136,7 @@ twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_
 
 # Run addFmaskSDS
 echo "Adding Fmask SDS"
+echo "$aerosol_qa"
 addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" "$aerosol_qa" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
 
 # Trim edge pixels for spurious SR values
