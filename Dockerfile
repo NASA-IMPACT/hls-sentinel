@@ -1,4 +1,4 @@
-FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-3.2.0
+FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-3.5.1
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -110,8 +110,7 @@ COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S
 RUN pip3 install --upgrade awscli
 RUN pip3 install click==7.1.2
 RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
-
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.1
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.2
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.2
 
@@ -121,11 +120,10 @@ RUN pip3 install wheel
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.7
 RUN pip3 install libxml2-python3
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-hdf_to_cog@v2.1
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.8
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-utilities@v1.9
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-cmr_stac@v1.7
 
 COPY ./scripts/* ${PREFIX}/bin/
 ENV OMP_NUM_THREADS=4
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["sentinel.sh"]
-
