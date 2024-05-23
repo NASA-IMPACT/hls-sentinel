@@ -110,9 +110,9 @@ COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S
 RUN pip3 install --upgrade awscli
 RUN pip3 install click==7.1.2
 RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.2
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.3
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.2
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.4
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v2.0
 
