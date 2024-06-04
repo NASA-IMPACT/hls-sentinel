@@ -13,7 +13,7 @@ ENV PREFIX=/usr/local \
     HDFLINK=" -lmfhdf -ldf -lm" \
     ECS_ENABLE_TASK_IAM_ROLE=true \
     PYTHONPATH="${PYTHONPATH}:${PREFIX}/lib/python3.6/site-packages" \
-    ACCODE=LaSRCL8V3.5.5 \
+    ACCODE=LaSRCL8V3.5.1 \
     LC_ALL=en_US.utf-8 \
     LANG=en_US.utf-8
 
@@ -112,7 +112,7 @@ RUN pip3 install click==7.1.2
 RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.3
 
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.4
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.5
 
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v2.0
 
