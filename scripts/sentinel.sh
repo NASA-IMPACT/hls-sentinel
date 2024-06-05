@@ -167,7 +167,7 @@ hdf_to_cog "$angleoutputfinal" --output-dir "$workingdir" --product S30_ANGLES
 
 # Create thumbnail
 echo "Creating thumbnail"
-create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
+create_thumbnail -i "$workingdir" -o "$output_thumbnail" -s S30
 
 # Create metadata
 echo "Creating metadata"
