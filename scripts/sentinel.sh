@@ -1,15 +1,17 @@
 #!/bin/bash
 # shellcheck disable=SC2153
-# shellcheck disable=SC1091 
+# shellcheck disable=SC1091
 # Exit on any error
 set -o errexit
 
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
 bucket="$OUTPUT_BUCKET"
+vi_bucket="$VI_OUTPUT_BUCKET"
 # shellcheck disable=SC2034
 inputbucket="$INPUT_BUCKET"
 workingdir="/var/scratch/${jobid}"
+vidir="${workingdir}/vi"
 bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
 replace_existing="$REPLACE_EXISTING"
@@ -54,6 +56,7 @@ set_output_names () {
   output_metadata="${workingdir}/${outputname}.cmr.xml"
   output_stac_metadata="${workingdir}/${outputname}_stac.json"
   bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
+  vi_bucket_key="s3://${vi_bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
   gibs_dir="${workingdir}/gibs"
   gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
@@ -171,7 +174,7 @@ create_thumbnail -i "$workingdir" -o "$output_thumbnail" -s S30
 
 # Create metadata
 echo "Creating metadata"
-create_metadata "$output_hdf" --save "$output_metadata" 
+create_metadata "$output_hdf" --save "$output_metadata"
 
 # Create STAC metadata
 cmr_to_stac_item "$output_metadata" "$output_stac_metadata" \
@@ -202,7 +205,7 @@ if [ -z "$debug_bucket" ]; then
   # Copy manifest to S3 to signal completion.
   aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
 else
-  # Create 
+  # Create
   # Convert intermediate hdf to COGs
   hdf_to_cog "$resample30m" --output-dir "$workingdir" --product S30 --debug-mode
   hdf_to_cog "$nbarIntermediate" --output-dir "$workingdir" --product S30 --debug-mode
@@ -227,7 +230,7 @@ for gibs_id_dir in "$gibs_dir"/* ; do
       subtile_basename=$(basename "$xml" .xml)
       subtile_manifest_name="${subtile_basename}.json"
       subtile_manifest="${gibs_id_dir}/${subtile_manifest_name}"
-      gibs_id_bucket_key="$gibs_bucket_key/${gibsid}" 
+      gibs_id_bucket_key="$gibs_bucket_key/${gibsid}"
       echo "Gibs id bucket key is ${gibs_id_bucket_key}"
 
       create_manifest "$gibs_id_dir" "$subtile_manifest" \
@@ -252,3 +255,23 @@ for gibs_id_dir in "$gibs_dir"/* ; do
     fi
 done
 echo "All GIBS tiles created"
+
+# Generate VI files
+echo "Generating VI files"
+vi_generate_indices -i "$workingdir" -o "$vidir" -id "$outputname"
+vi_generate_metadata -- "$workingdir" -o "$vidir"
+
+if [ -z "$debug_bucket" ]; then
+  aws s3 cp "$vidir" "$vi_bucket_key" --exclude "*" --include "*.tif" \
+    --include "*.xml" --include "*.jpg" --include "*_stac.json" \
+    --profile gccprofile --recursive
+
+  # Copy manifest to S3 to signal completion.
+  # aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
+else
+  # Copy all vi files to debug bucket.
+  echo "Copy files to debug bucket"
+  debug_bucket_key=s3://${debug_bucket}/${outputname}
+  aws s3 cp "$vidir" "$debug_bucket_key" --recursive --acl public-read
+fi
+
