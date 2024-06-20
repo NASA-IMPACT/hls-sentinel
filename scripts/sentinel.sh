@@ -7,7 +7,6 @@ set -o errexit
 jobid="$AWS_BATCH_JOB_ID"
 granulelist="$GRANULE_LIST"
 bucket="$OUTPUT_BUCKET"
-vi_bucket="$VI_OUTPUT_BUCKET"
 # shellcheck disable=SC2034
 inputbucket="$INPUT_BUCKET"
 workingdir="/var/scratch/${jobid}"
@@ -56,7 +55,7 @@ set_output_names () {
   output_metadata="${workingdir}/${outputname}.cmr.xml"
   output_stac_metadata="${workingdir}/${outputname}_stac.json"
   bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
-  vi_bucket_key="s3://${vi_bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
+  vi_bucket_key="s3://${bucket}/S30_VI/data/${year}${day_of_year}/${outputname}${twinkey}"
   gibs_dir="${workingdir}/gibs"
   gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
