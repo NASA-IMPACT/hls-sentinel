@@ -47,6 +47,7 @@ set_output_names () {
   hlsversion="v2.0"
   day_of_year=$(get_doy "${year}" "${month}" "${day}")
   outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.${hlsversion}"
+  vi_outputname="HLS-VI.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.${hlsversion}"
   output_hdf="${workingdir}/${outputname}.hdf"
   nbar_name="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}.${hms}.${hlsversion}"
   nbar_input="${workingdir}/${nbar_name}.hdf"
@@ -260,13 +261,19 @@ echo "Generating VI files"
 vi_generate_indices -i "$workingdir" -o "$vidir" -s "$outputname"
 vi_generate_metadata -i "$workingdir" -o "$vidir"
 
+echo "Generating VI manifest"
+vi_manifest_name="${vi_outputname}.json"
+vi_manifest="${vidir}/${vi_manifest_name}"
+create_manifest "$vidir" "$vi_manifest" "$vi_bucket_key" "HLSS30_VI" \
+  "$vi_outputname" "$jobid" false
+
 if [ -z "$debug_bucket" ]; then
   aws s3 cp "$vidir" "$vi_bucket_key" --exclude "*" --include "*.tif" \
     --include "*.xml" --include "*.jpg" --include "*_stac.json" \
     --profile gccprofile --recursive
 
-  # Copy manifest to S3 to signal completion.
-  # aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
+  # Copy vi manifest to S3 to signal completion.
+  aws s3 cp "$vi_manifest" "${vi_bucket_key}/${vi_manifest_name}" --profile gccprofile
 else
   # Copy all vi files to debug bucket.
   echo "Copy files to debug bucket"
