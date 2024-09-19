@@ -56,7 +56,7 @@ set_output_names () {
   output_metadata="${workingdir}/${outputname}.cmr.xml"
   output_stac_metadata="${workingdir}/${outputname}_stac.json"
   bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
-  vi_bucket_key="s3://${bucket}/S30_VI/data/${year}${day_of_year}/${outputname}${twinkey}"
+  vi_bucket_key="s3://${bucket}/S30_VI/data/${year}${day_of_year}/${vi_outputname}${twinkey}"
   gibs_dir="${workingdir}/gibs"
   gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
