@@ -1,4 +1,4 @@
-slope_2A offset_2A
+slope_2C offset_2C
 1.003 -0.0
 0.9851 -0.0027
 1.0038 -0.0009
