@@ -6,8 +6,7 @@ OBJ = 	s2trim.o \
 	hls_projection.o \
 	s2r.o \
 	util.o \
-	hdfutility.o \
-	hls_hdfeos.o
+	hdfutility.o 
 	
 $(TGT): $(OBJ)
 	$(CC) $(CFLAGS) -o $(TGT) $(OBJ) -L$(GCTPLIB) -L$(HDFLIB) -L$(ZLIB) -L$(SZLIB) -L$(JPGLIB) -L$(PROJLIB)  $(GCTPLINK) $(HDFLINK) 
@@ -26,9 +25,6 @@ util.o: ${SRC_DIR}/util.c
 
 hdfutility.o: ${SRC_DIR}/hdfutility.c
 	$(CC) $(CFLAGS) -c  ${SRC_DIR}/hdfutility.c -I$(HDFINC) -I$(SRC_DIR)
-
-hls_hdfeos.o: ${SRC_DIR}/hls_hdfeos.c
-	$(CC) $(CFLAGS) -c  ${SRC_DIR}/hls_hdfeos.c -I$(HDFINC) -I$(SRC_DIR)
 
 install:
 	install -m 755 $(TGT) /usr/bin

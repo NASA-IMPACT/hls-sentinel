@@ -20,19 +20,21 @@
  *
  * Apr 1, 2020: Note that the mean sun/view angles are from twin A only; later in 
  *   derive_s2nbar these angles will be recomputed and so set properly. 
+ *
+ * Mar 18, 2024:
+ *	 The silly max NDVI rule in selecting between two twin granules is eliminated
+ *	 because the leading/trailing edges of the twin granules have been trimmed where
+ *	 some pixels are possibly corrupted. With trimming, data from either granule is good. 
  ********************************************************************************/
 
 #include "s2r.h"
 #include "util.h"
-#include "hls_hdfeos.h"
+// #include "hls_hdfeos.h"	// Not needed. Sep 25, 2024
 
 int copy_metadata_AB(s2r_t *s2rA, s2r_t *s2rB, s2r_t *s2rO);
 
 /* Keep the pixel whose 10m row/col are given */
 int copypix(s2r_t *from, int irow60m, int icol60m, s2r_t *to);
-
-/* Compute NDVI for the 60m pixel location */
-double ndvi(s2r_t *s2, int irow60m, int icol60m);
 
 int main(int argc, char * argv[])
 {
@@ -99,12 +101,8 @@ int main(int argc, char * argv[])
 			if (s2rA.ref[ubidx][k60m] != HLS_REFL_FILLVAL ) 
 				copypix(&s2rA, irow60m, icol60m, &s2rO);
 
-			if (s2rB.ref[ubidx][k60m] != HLS_REFL_FILLVAL) {
-				if (s2rO.ref[ubidx][k60m] == HLS_REFL_FILLVAL) 
+			if (s2rB.ref[ubidx][k60m] != HLS_REFL_FILLVAL && s2rO.ref[ubidx][k60m] == HLS_REFL_FILLVAL) 
 					copypix(&s2rB, irow60m, icol60m, &s2rO);
-				else if (ndvi(&s2rB, irow60m, icol60m) > ndvi(&s2rO, irow60m,icol60m)) 
-					copypix(&s2rB, irow60m, icol60m, &s2rO);
-			}
 		}
 	}
 
@@ -132,15 +130,6 @@ int main(int argc, char * argv[])
 		exit(1);
 	}
 
-
-	/* Make it hdfeos */
- 	sds_info_t all_sds[S2NBAND+2];
-	set_S10_sds_info(all_sds, S2NBAND+2, &s2rO);
-	ret = S10_PutSpaceDefHDF(s2rO.fname, all_sds, S2NBAND+2);
-	if (ret != 0) {
-		Error("Error in HLS_PutSpaceDefHDF");
-		exit(1);
-	}
 	return(0);
 }
 
@@ -263,34 +252,3 @@ int copypix(s2r_t *from, int irow60m, int icol60m, s2r_t *to)
 	return 0;
 }
 
-/* Compute NDVI for the 60m pixel location */
-double ndvi(s2r_t *s2, int irow60m, int icol60m)
-{
-	int irow, icol;
-	int ncol, k;
-	int rowbeg, rowend, colbeg, colend;
-	double red, nir;
-	int bs = 6; 	/* 6 10m pixels nesting within a 60m pixel in one dimension */
-
-	ncol = s2->ncol[0]; 	/* 10m pixels */
-
-	rowbeg = irow60m * bs;
-	rowend = rowbeg + bs - 1;
-	colbeg = icol60m * bs;
-	colend = colbeg + bs - 1;
-
-	red = nir = 0;
-	for (irow = rowbeg; irow <= rowend; irow++) {
-		for (icol = colbeg; icol <= colend; icol++) {
-			k = irow * ncol + icol;
-			if (s2->ref[3][k] != HLS_REFL_FILLVAL && s2->ref[7][k] != HLS_REFL_FILLVAL) {
-      				red += s2->ref[3][k];
-				nir += s2->ref[7][k];
-			}
-		}
-	}
-	if (red != 0 && nir != 0)
-		return (nir-red)/(nir+red);
-	else
-		return HLS_REFL_FILLVAL;
-}
