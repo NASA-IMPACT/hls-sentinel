@@ -106,6 +106,7 @@ RUN cd ${SRC_DIR}/trim \
 
 COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S2A.txt
 COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
+COPY ./hls_libs/L8like/bandpass_parameter.S2C.txt ${PREFIX}/bandpass_parameter.S2C.txt
 
 RUN pip3 install --upgrade awscli
 RUN pip3 install click==7.1.2
