@@ -67,7 +67,7 @@ cloud_cover_valid=$(check_sentinel_clouds "$xml_safe")
 
 cd "$safegranuledir"
 # Run Fmask
-/usr/local/MATLAB/application/run_Fmask_4_7.sh /usr/local/MATLAB/v910 /usr/local/MATLAB/application/AuxiData/ >> fmask_out.txt
+/usr/local/MATLAB/application/run_Fmask_4_7.sh /usr/local/MATLAB/R2022b /usr/local/MATLAB/application/AuxiData/ >> fmask_out.txt
 wait
 fmask_file=$(cat fmask_out.txt)
 echo "$fmask_file"
