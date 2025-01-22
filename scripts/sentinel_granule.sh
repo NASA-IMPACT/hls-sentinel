@@ -66,7 +66,9 @@ xml_safe="${safedirectory}/MTD_MSIL1C.xml"
 cloud_cover_valid=$(check_sentinel_clouds "$xml_safe")
 
 cd "$safegranuledir"
+
 # Run Fmask
+echo "Running Fmask"
 run_Fmask.sh >> fmask_out.txt
 wait
 fmask_file=$(cat fmask_out.txt)
