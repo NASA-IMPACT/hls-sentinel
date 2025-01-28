@@ -63,7 +63,7 @@ apply_s2_quality_mask "$safegranuledir"
 echo "Running derive_s2ang"
 derive_s2ang "$xml" "$detfoo06" "$detfoo" "$angleoutput"
 
-# The detfoo output is an unneccesary legacy output
+# The detfoo output is an unnecessary legacy output
 rm "$detfoo"
 
 # Check Sentinel cloud metadata.
