@@ -213,7 +213,7 @@ else
   # Copy all intermediate files to debug bucket.
   echo "Copy files to debug bucket"
   debug_bucket_key=s3://${debug_bucket}/${outputname}
-  aws s3 cp "$workingdir" "$debug_bucket_key" --recursive --acl public-read
+  aws s3 cp "$workingdir" "$debug_bucket_key" --recursive --profile gccprofile
 fi
 
 # Generate GIBS browse subtiles
@@ -250,7 +250,8 @@ for gibs_id_dir in "$gibs_dir"/* ; do
         # Copy all intermediate files to debug bucket.
         echo "Copy files to debug bucket"
         debug_bucket_key=s3://${debug_bucket}/${outputname}
-        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet --acl public-read
+        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet \
+        --profile gccprofile
       fi
     fi
 done

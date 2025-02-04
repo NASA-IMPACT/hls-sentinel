@@ -1,4 +1,4 @@
-FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base-3.5.1
+FROM 018923174646.dkr.ecr.us-west-2.amazonaws.com/hls-base:v3.5.1
 ENV PREFIX=/usr/local \
     SRC_DIR=/usr/local/src \
     GCTPLIB=/usr/local/lib \
@@ -106,12 +106,13 @@ RUN cd ${SRC_DIR}/trim \
 
 COPY ./hls_libs/L8like/bandpass_parameter.S2A.txt ${PREFIX}/bandpass_parameter.S2A.txt
 COPY ./hls_libs/L8like/bandpass_parameter.S2B.txt ${PREFIX}/bandpass_parameter.S2B.txt
+COPY ./hls_libs/L8like/bandpass_parameter.S2C.txt ${PREFIX}/bandpass_parameter.S2C.txt
 
 RUN pip3 install --upgrade awscli
 RUN pip3 install click==7.1.2
 RUN pip3 install rio-cogeo==1.1.10 --no-binary rasterio --user
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-thumbnails@v1.3
-RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.5
+RUN pip3 install git+https://github.com/NASA-IMPACT/hls-metadata@v2.6
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-manifest@v2.1
 RUN pip3 install wheel
 RUN pip3 install git+https://github.com/NASA-IMPACT/hls-browse_imagery@v1.7
