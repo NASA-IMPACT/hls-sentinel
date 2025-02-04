@@ -261,6 +261,7 @@ echo "All GIBS tiles created"
 echo "Generating VI files"
 vi_generate_indices -i "$workingdir" -o "$vidir" -s "$outputname"
 vi_generate_metadata -i "$workingdir" -o "$vidir"
+vi_generate_stac_items --cmr_xml "$vidir/${vi_outputname}.cmr.xml" --endpoint data.lpdaac.earthdatacloud.nasa.gov --version 020 --out_json "$vidir/${vi_outputname}_stac.json"
 
 echo "Generating VI manifest"
 vi_manifest_name="${vi_outputname}.json"
