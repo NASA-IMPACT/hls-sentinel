@@ -54,11 +54,16 @@ else
   detfoo06=$(get_detector_footprint "$safedirectory")
 fi
 
+# Apply ESA's pixel-level quality mask for lost or degraded packets
+# This script updates the L1C imagery in-place by setting affected pixels
+# to the L1C "nodata" value (0)
+apply_s2_quality_mask "$safegranuledir"
+
 # Run derive_s2ang
 echo "Running derive_s2ang"
 derive_s2ang "$xml" "$detfoo06" "$detfoo" "$angleoutput"
 
-# The detfoo output is an unneccesary legacy output
+# The detfoo output is an unnecessary legacy output
 rm "$detfoo"
 
 # Check Sentinel cloud metadata.
