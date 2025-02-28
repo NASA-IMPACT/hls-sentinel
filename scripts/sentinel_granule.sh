@@ -100,12 +100,12 @@ cd "$granuledir"
 # Re-zip the (potentially masked) SAFE directory for custom unzipping by ESPA
 # unpacking script
 masked_safezip=${safezip}.masked.zip
-zip -r $masked_safezip $safegranuledir
+zip -r "$masked_safezip" "$safegranuledir"
 # remove original SAFE zip to save disk space
-rm $safezip
+rm "$safezip"
 
 unpackage_s2.py -i "$masked_safezip" -o "$granuledir"
-rm $masked_safezip
+rm "$masked_safezip"
 
 # Convert to espa format
 cd "$safedirectory"
