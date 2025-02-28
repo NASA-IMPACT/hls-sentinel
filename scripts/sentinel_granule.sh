@@ -101,7 +101,7 @@ cd "$granuledir"
 # Re-zip the (potentially masked) SAFE directory for custom unzipping by ESPA
 # unpacking script
 masked_safezip=${safezip}.masked.zip
-zip -r "${masked_safezip}" "$(basename $safedirectory)"
+zip -r "${masked_safezip}" "$(basename "$safedirectory")"
 # remove original SAFE zip to save disk space
 rm "$safezip"
 
