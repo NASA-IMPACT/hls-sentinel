@@ -103,6 +103,10 @@ rm -rf "${granule}.SAFE"
 unpackage_s2.py -i "$safezip" -o "$granuledir"
 rm "$safezip"
 
+# Apply ESA's pixel-level quality mask for lost or degraded packets AGAIN
+# We need to do this twice because the previous step nuked the original SAFE file
+apply_s2_quality_mask "$safegranuledir"
+
 # Convert to espa format
 cd "$safedirectory"
 convert_sentinel_to_espa
