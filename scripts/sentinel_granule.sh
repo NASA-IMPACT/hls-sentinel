@@ -87,6 +87,7 @@ if [ "$fmask_valid" == "invalid" ] && [ "$cloud_cover_valid" == "invalid" ]; the
   echo "Fmask reports no clear pixels. Exiting now"
   exit 4
 fi
+rm fmask_out.txt
 
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
 
@@ -96,16 +97,15 @@ gdal_translate -of ENVI "$fmask" "$fmaskbin"
 
 cd "$granuledir"
 
-# Removes previously unzipped SAFE directory for replacement with ESPA unpacking
-# result
-rm -rf "${granule}.SAFE"
+# Re-zip the (potentially masked) SAFE directory for custom unzipping by ESPA
+# unpacking script
+masked_safezip=${safezip}.masked.zip
+zip -r $masked_safezip $safegranuledir
+# remove original SAFE zip to save disk space
+rm $safezip
 
-unpackage_s2.py -i "$safezip" -o "$granuledir"
-rm "$safezip"
-
-# Apply ESA's pixel-level quality mask for lost or degraded packets AGAIN
-# We need to do this twice because the previous step nuked the original SAFE file
-apply_s2_quality_mask "$safegranuledir"
+unpackage_s2.py -i "$masked_safezip" -o "$granuledir"
+rm $masked_safezip
 
 # Convert to espa format
 cd "$safedirectory"
