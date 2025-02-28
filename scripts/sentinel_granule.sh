@@ -91,9 +91,10 @@ rm fmask_out.txt
 
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
 
-echo "Converting to flat binary"
+echo "Converting Fmask to flat binary at $fmaskbin"
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
+rm -rf "${safegranuledir}/FMASK_DATA"
 
 cd "$granuledir"
 
