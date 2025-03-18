@@ -54,11 +54,16 @@ else
   detfoo06=$(get_detector_footprint "$safedirectory")
 fi
 
+# Apply ESA's pixel-level quality mask for lost or degraded packets
+# This script updates the L1C imagery in-place by setting affected pixels
+# to the L1C "nodata" value (0)
+apply_s2_quality_mask "$safegranuledir"
+
 # Run derive_s2ang
 echo "Running derive_s2ang"
 derive_s2ang "$xml" "$detfoo06" "$detfoo" "$angleoutput"
 
-# The detfoo output is an unneccesary legacy output
+# The detfoo output is an unnecessary legacy output
 rm "$detfoo"
 
 # Check Sentinel cloud metadata.
@@ -82,21 +87,26 @@ if [ "$fmask_valid" == "invalid" ] && [ "$cloud_cover_valid" == "invalid" ]; the
   echo "Fmask reports no clear pixels. Exiting now"
   exit 4
 fi
+rm fmask_out.txt
 
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
 
-echo "Converting to flat binary"
+echo "Converting Fmask to flat binary at $fmaskbin"
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
+rm -rf "${safegranuledir}/FMASK_DATA"
 
 cd "$granuledir"
 
-# Removes previously unzipped SAFE directory for replacement with ESPA unpacking
-# result
-rm -rf "${granule}.SAFE"
-
-unpackage_s2.py -i "$safezip" -o "$granuledir"
+# Re-zip the (potentially masked) SAFE directory for custom unzipping by ESPA
+# unpacking script
+masked_safezip=${safezip}.masked.zip
+zip -r "${masked_safezip}" "$(basename "$safedirectory")"
+# remove original SAFE zip to save disk space
 rm "$safezip"
+
+unpackage_s2.py -i "$masked_safezip" -o "$granuledir"
+rm "$masked_safezip"
 
 # Convert to espa format
 cd "$safedirectory"
