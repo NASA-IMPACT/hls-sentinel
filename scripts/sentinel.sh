@@ -15,7 +15,6 @@ bucket_role_arn="$GCC_ROLE_ARN"
 debug_bucket="$DEBUG_BUCKET"
 replace_existing="$REPLACE_EXISTING"
 gibs_bucket="$GIBS_OUTPUT_BUCKET"
-ACCODE="LaSRC v3.5.2"
 
 # Remove tmp files on exit
 # shellcheck disable=SC2064
