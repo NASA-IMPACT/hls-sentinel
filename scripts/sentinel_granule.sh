@@ -4,6 +4,8 @@
 # Exit on any error
 set -o errexit
 
+ACCODE="LaSRC v3.5.2"
+
 # granule, granuledir, inputbucket, angleoutput, granuleoutput variable set in sentinel.sh
 safedirectory="${granuledir}/${granule}.SAFE"
 safezip="${granuledir}/${granule}.zip"
@@ -144,11 +146,11 @@ convert_espa_to_hdf --xml="$hls_espa_two_xml" --hdf="$sr_hdf_two"
 
 # Combine split hdf files and resample 10M SR bands back to 20M and 60M.
 echo "Combining hdf files"
-twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_combined_hdf"
+twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml "$ACCODE" "$hls_sr_combined_hdf"
 
 # Run addFmaskSDS
 echo "Adding Fmask SDS"
-addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" "$aerosol_qa" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
+addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" "$aerosol_qa" MTD_MSIL1C.xml MTD_TL.xml "$ACCODE" "$hls_sr_output_hdf"
 
 # Trim edge pixels for spurious SR values
 echo "Trimming output hdf file"
