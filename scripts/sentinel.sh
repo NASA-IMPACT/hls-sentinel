@@ -1,19 +1,28 @@
 #!/bin/bash
 # shellcheck disable=SC2153
-# shellcheck disable=SC1091 
+# shellcheck disable=SC1091
 # Exit on any error
 set -o errexit
 
-jobid="$AWS_BATCH_JOB_ID"
+save_debug_output="$SAVE_DEBUG_OUTPUT"
+exit_after_fmask="$EXIT_AFTER_FMASK"
+exit_after_lasrc="$EXIT_AFTER_LASRC"
+
+
+#granulelist="S2A_MSIL1C_20180213T110141_N0500_R094_T31UDR_20230907T125643"
+#"S1A_MSIL1C_20250408T001241_N0511_R073_T55HGB_20250408T030123"
 granulelist="$GRANULE_LIST"
-bucket="$OUTPUT_BUCKET"
-# shellcheck disable=SC2034
-inputbucket="$INPUT_BUCKET"
-workingdir="/var/scratch/${jobid}"
-bucket_role_arn="$GCC_ROLE_ARN"
-debug_bucket="$DEBUG_BUCKET"
+echo $granulelist
+workingdir="/var/scratch"
+outputdir="/tmp/output"
+
+if [ "$exit_after_lasrc" == "true" ] && [ "$exit_after_fmask" == "true" ]; then
+   echo "Set exit_after_fmask  to false to proceed"
+   exit
+fi
+
 replace_existing="$REPLACE_EXISTING"
-gibs_bucket="$GIBS_OUTPUT_BUCKET"
+echo "$replace_existing"
 
 # Remove tmp files on exit
 # shellcheck disable=SC2064
@@ -21,6 +30,10 @@ trap "rm -rf $workingdir; exit" INT TERM EXIT
 
 # Create workingdir
 mkdir -p "$workingdir"
+
+# Create outputdir
+mkdir -p "$outputdir"
+
 # The derive_s2nbar C code infers values from the input file name so this
 # formatting is necessary.  This implicit name requirement is not documented
 # anywhere!
@@ -31,6 +44,7 @@ set_output_names () {
   # Use the base SAFE name without the unique id for the output file name.
   IFS='_'
   read -ra granulecomponents <<< "$1"
+  echo $granulecomponents
   # Include twin in bucket key for s3 when argument is included.
   # this is necessary for LPDAAC's ingestion timing.
   twinkey=""
@@ -44,6 +58,7 @@ set_output_names () {
   hms=${date:8:7}
 
   hlsversion="v2.0"
+  fmaskversion="4.7"
   day_of_year=$(get_doy "${year}" "${month}" "${day}")
   outputname="HLS.S30.${granulecomponents[5]}.${year}${day_of_year}${hms}.${hlsversion}"
   output_hdf="${workingdir}/${outputname}.hdf"
@@ -53,18 +68,16 @@ set_output_names () {
   output_thumbnail="${workingdir}/${outputname}.jpg"
   output_metadata="${workingdir}/${outputname}.cmr.xml"
   output_stac_metadata="${workingdir}/${outputname}_stac.json"
-  bucket_key="s3://${bucket}/S30/data/${year}${day_of_year}/${outputname}${twinkey}"
-  gibs_dir="${workingdir}/gibs"
-  gibs_bucket_key="s3://${gibs_bucket}/S30/data/${year}${day_of_year}"
   # We also need to obtain the sensor for the Bandpass parameters file
   sensor="${granulecomponents[0]:0:3}"
   angleoutputfinal="${workingdir}/${outputname}.ANGLE.hdf"
+  IFS=''
 }
 
 exit_if_exists () {
   if [ -n "$replace_existing" ]; then
     # Check if output folder key exists
-    exists=$(aws s3 ls "${bucket_key}/" | wc -l)
+    exists=$(ls "${outputdir}/" | wc -l)
     if [ ! "$exists" = 0 ]; then
       echo "Output product already exists.  Not replacing"
       exit 4
@@ -76,6 +89,7 @@ echo "Start processing granules"
 # Create array from granulelist
 IFS=','
 read -r -a granules <<< "$granulelist"
+echo $granules
 # Consolidate twin granules if necessary.
 if [ "${#granules[@]}" = 2 ]; then
   # Use the base SAFE name without the unique id for the output file name.
@@ -110,13 +124,15 @@ if [ "${#granules[@]}" = 2 ]; then
 else
   # If it is a single granule, just use granule output without condolidation
   granule="$granulelist"
+  echo $granule
   set_output_names "$granule"
   exit_if_exists
+  
 
   granuledir="${workingdir}/${granule}"
   angleoutput="${granuledir}/angle.hdf"
   granuleoutput="${granuledir}/sr.hdf"
-
+  echo "start"  
   source sentinel_granule.sh
 fi
 
@@ -129,12 +145,18 @@ create_s2at30m "$granuleoutput" "$resample30m"
 # Unlike all the other C libs, derive_s2nbar and L8like modify the input file
 # Move the resample output to nbar naming.
 # Maintain intermediate 30m version in debug mode.
-if [ -z "$debug_bucket" ]; then
+if [ "save_debug_output" == "false" ]; then
   mv "$resample30m" "$nbar_input"
   mv "$resample30m_hdr" "$nbar_hdr"
 else
   cp "$resample30m" "$nbar_input"
   cp "$resample30m_hdr" "$nbar_hdr"
+fi
+
+if [ "$exit_after_lasrc" == "true" ]; then
+  rsync -av ${workingdir}/ "${outputdir}/${outputname}/"
+  echo "LaSRC successfully completed. Saving resampled output to $outputdir. Exiting now"
+  exit
 fi
 
 # Nbar
@@ -145,7 +167,7 @@ derive_s2nbar "$nbar_input" "$angleoutput" "$cfactor"
 nbarIntermediate="${workingdir}/nbarIntermediate.hdf"
 nbarIntermediate_hdr="${nbarIntermediate}.hdr"
 # Maintain intermediate nbar version in debug mode.
-if [ "$debug_bucket" ]; then
+if [ "$save_debug_output" == "true" ]; then
   cp "$nbar_input" "$nbarIntermediate"
   cp "$nbar_hdr" "$nbarIntermediate_hdr"
 fi
@@ -167,11 +189,11 @@ hdf_to_cog "$angleoutputfinal" --output-dir "$workingdir" --product S30_ANGLES
 
 # Create thumbnail
 echo "Creating thumbnail"
-create_thumbnail -i "$output_hdf" -o "$output_thumbnail" -s S30
+create_thumbnail -i "$workingdir" -o "$output_thumbnail" -s S30
 
 # Create metadata
 echo "Creating metadata"
-create_metadata "$output_hdf" --save "$output_metadata" 
+create_metadata "$output_hdf" --save "$output_metadata"
 
 # Create STAC metadata
 cmr_to_stac_item "$output_metadata" "$output_stac_metadata" \
@@ -184,71 +206,25 @@ manifest="${workingdir}/${manifest_name}"
 create_manifest "$workingdir" "$manifest" "$bucket_key" "HLSS30" \
   "$outputname" "$jobid" false
 
-# Copy output to S3.
-mkdir -p ~/.aws
-echo "[profile gccprofile]" > ~/.aws/config
-echo "region=us-east-1" >> ~/.aws/config
-echo "output=text" >> ~/.aws/config
 
-echo "[gccprofile]" > ~/.aws/credentials
-echo "role_arn = ${bucket_role_arn}" >> ~/.aws/credentials
-echo "credential_source = Ec2InstanceMetadata" >> ~/.aws/credentials
+if [ "$save_debug_output" == "false" ]; then
+  mkdir -p "${outputdir}/${outputname}/"
+  rsync -av --include="*.tif" \
+    --include="*.xml" --include="*.jpg" --include="*_stac.json" \
+    --exclude="*fmask.bin.aux.xml" --exclude="*" "${workingdir}/" "/tmp/output/${outputname}/" 
 
-if [ -z "$debug_bucket" ]; then
-  aws s3 cp "$workingdir" "$bucket_key" --exclude "*" --include "*.tif" \
-    --include "*.xml" --include "*.jpg" --include "*_stac.json" \
-    --exclude "*fmask.bin.aux.xml" --profile gccprofile --recursive
-
-  # Copy manifest to S3 to signal completion.
-  aws s3 cp "$manifest" "${bucket_key}/${manifest_name}" --profile gccprofile
 else
-  # Create 
+  # Create
   # Convert intermediate hdf to COGs
   hdf_to_cog "$resample30m" --output-dir "$workingdir" --product S30 --debug-mode
   hdf_to_cog "$nbarIntermediate" --output-dir "$workingdir" --product S30 --debug-mode
 
   # Copy all intermediate files to debug bucket.
   echo "Copy files to debug bucket"
-  debug_bucket_key=s3://${debug_bucket}/${outputname}
-  aws s3 cp "$workingdir" "$debug_bucket_key" --recursive --acl public-read
+  mkdir -p "${outputdir}/${outputname}/"
+  rsync -av "${workingdir}/" "/tmp/output/${outputname}/" 
 fi
 
-# Generate GIBS browse subtiles
-echo "Generating GIBS browse subtiles"
-mkdir -p "$gibs_dir"
-granule_to_gibs "$workingdir" "$gibs_dir" "$outputname"
-for gibs_id_dir in "$gibs_dir"/* ; do
-    if [ -d "$gibs_id_dir" ]; then
-      gibsid=$(basename "$gibs_id_dir")
-      echo "Processing gibs id ${gibsid}"
-      # shellcheck disable=SC2206
-      xmlfiles=(${gibs_id_dir}/*.xml)
-      xml="${xmlfiles[0]}"
-      subtile_basename=$(basename "$xml" .xml)
-      subtile_manifest_name="${subtile_basename}.json"
-      subtile_manifest="${gibs_id_dir}/${subtile_manifest_name}"
-      gibs_id_bucket_key="$gibs_bucket_key/${gibsid}" 
-      echo "Gibs id bucket key is ${gibs_id_bucket_key}"
+#done
+echo "All files created"
 
-      create_manifest "$gibs_id_dir" "$subtile_manifest" \
-        "$gibs_id_bucket_key" "HLSS30" "$subtile_basename" "$jobid" true
-
-      # Copy GIBS tile package to S3.
-      if [ -z "$debug_bucket" ]; then
-        aws s3 cp "$gibs_id_dir" "$gibs_id_bucket_key" --exclude "*"  \
-          --include "*.tif" --include "*.xml" --profile gccprofile \
-          --recursive --quiet
-
-        # Copy manifest to S3 to signal completion.
-        aws s3 cp "$subtile_manifest" \
-          "${gibs_id_bucket_key}/${subtile_manifest_name}" \
-          --profile gccprofile
-      else
-        # Copy all intermediate files to debug bucket.
-        echo "Copy files to debug bucket"
-        debug_bucket_key=s3://${debug_bucket}/${outputname}
-        aws s3 cp "$gibs_id_dir" "$debug_bucket_key" --recursive --quiet --acl public-read
-      fi
-    fi
-done
-echo "All GIBS tiles created"

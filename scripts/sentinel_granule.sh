@@ -4,10 +4,12 @@
 # Exit on any error
 set -o errexit
 
+ACCODE="LaSRC v3.5.1.0"
+
 # granule, granuledir, inputbucket, angleoutput, granuleoutput variable set in sentinel.sh
 safedirectory="${granuledir}/${granule}.SAFE"
 safezip="${granuledir}/${granule}.zip"
-inputgranule="s3://${inputbucket}/${granule}.zip"
+inputgranule="/tmp/${granule}.zip"
 
 # Intermediate outputs.
 fmaskbin="${granuledir}/fmask.bin"
@@ -22,8 +24,8 @@ mkdir -p "$granuledir"
 # url=gs://gcp-public-data-sentinel-2/tiles/${ADDR[5]:1:2}/${ADDR[5]:3:1}/${ADDR[5]:4:2}/${granule}.SAFE
 # gsutil -m cp -r "$url" "$granuledir"
 
-# Download granule from s3
-aws s3 cp "$inputgranule" "$safezip" --quiet
+# copy input granule
+cp "$inputgranule" "$safezip"
 unzip -q "$safezip" -d "$granuledir"
 
 # Get GRANULE sub directory
@@ -54,11 +56,16 @@ else
   detfoo06=$(get_detector_footprint "$safedirectory")
 fi
 
+# Apply ESA's pixel-level quality mask for lost or degraded packets
+# This script updates the L1C imagery in-place by setting affected pixels
+# to the L1C "nodata" value (0)
+apply_s2_quality_mask "$safegranuledir"
+
 # Run derive_s2ang
 echo "Running derive_s2ang"
 derive_s2ang "$xml" "$detfoo06" "$detfoo" "$angleoutput"
 
-# The detfoo output is an unneccesary legacy output
+# The detfoo output is an unnecessary legacy output
 rm "$detfoo"
 
 # Check Sentinel cloud metadata.
@@ -66,7 +73,9 @@ xml_safe="${safedirectory}/MTD_MSIL1C.xml"
 cloud_cover_valid=$(check_sentinel_clouds "$xml_safe")
 
 cd "$safegranuledir"
+
 # Run Fmask
+echo "Running Fmask"
 run_Fmask.sh >> fmask_out.txt
 wait
 fmask_file=$(cat fmask_out.txt)
@@ -80,28 +89,42 @@ if [ "$fmask_valid" == "invalid" ] && [ "$cloud_cover_valid" == "invalid" ]; the
   echo "Fmask reports no clear pixels. Exiting now"
   exit 4
 fi
+rm fmask_out.txt
 
 fmask="${safegranuledir}/FMASK_DATA/${grandir_id}_Fmask4.tif"
 
-echo "Converting to flat binary"
+if [ "$exit_after_fmask" == "true" ]; then
+  echo "Copying fmask file"
+  mkdir -p "${outputdir}/${outputname}/"
+  #cp $fmask "${outputdir}/${outputname}/${outputname}_Fmask4.tif"
+  cp $fmask "${outputdir}/${outputname}/${granule}_Fmask${fmaskversion}.tif"
+  echo "Fmask successfully completed. Exiting now"
+  exit
+fi
+
+echo "Converting Fmask to flat binary at $fmaskbin"
 # Convert to flat binary
 gdal_translate -of ENVI "$fmask" "$fmaskbin"
+rm -rf "${safegranuledir}/FMASK_DATA"
 
 cd "$granuledir"
 
-# Removes previously unzipped SAFE directory for replacement with ESPA unpacking
-# result
-rm -rf "${granule}.SAFE"
-
-unpackage_s2.py -i "$safezip" -o "$granuledir"
+# Re-zip the (potentially masked) SAFE directory for custom unzipping by ESPA
+# unpacking script
+masked_safezip=${safezip}.masked.zip
+zip -r "${masked_safezip}" "$(basename "$safedirectory")"
+# remove original SAFE zip to save disk space
 rm "$safezip"
+
+unpackage_s2.py -i "$masked_safezip" -o "$granuledir"
+rm "$masked_safezip"
 
 # Convert to espa format
 cd "$safedirectory"
 convert_sentinel_to_espa
 
 # After conversion remove all Sentinel jp2 files to reduce disk usage.
-if [ -z "$debug_bucket" ]; then
+if [ "$save_debug_output" == "false" ]; then
   rm ./*.jp2
 fi
 
@@ -131,12 +154,12 @@ convert_espa_to_hdf --xml="$hls_espa_one_xml" --hdf="$sr_hdf_one"
 convert_espa_to_hdf --xml="$hls_espa_two_xml" --hdf="$sr_hdf_two"
 
 # Combine split hdf files and resample 10M SR bands back to 20M and 60M.
-echo "Combining hdf files"
-twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_combined_hdf"
+echo "Combining hdf fiiles"
+twohdf2one "$sr_hdf_one" "$sr_hdf_two" MTD_MSIL1C.xml MTD_TL.xml "$ACCODE" "$hls_sr_combined_hdf"
 
 # Run addFmaskSDS
 echo "Adding Fmask SDS"
-addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" "$aerosol_qa" MTD_MSIL1C.xml MTD_TL.xml LaSRC "$hls_sr_output_hdf"
+addFmaskSDS "$hls_sr_combined_hdf" "$fmaskbin" "$aerosol_qa" MTD_MSIL1C.xml MTD_TL.xml "$ACCODE" "$hls_sr_output_hdf"
 
 # Trim edge pixels for spurious SR values
 echo "Trimming output hdf file"
@@ -145,6 +168,7 @@ s2trim "$hls_sr_output_hdf"
 # Remove intermediate files.
 cd "$granuledir"
 # Keep all intermediate files in debug mode
-if [ -z "$debug_bucket" ]; then
+if [ "$save_debug_output" == "false" ]; then
   rm -rf "$safedirectory"
 fi
+
